@@ -24,7 +24,17 @@ def load_result_rows(input_directory: Path) -> list[dict[str, Any]]:
 
 def _query_means(frame: pd.DataFrame) -> pd.DataFrame:
     return (
-        frame.groupby(["dataset", "query_id", "track", "method"], as_index=False)
+        frame.groupby(
+            [
+                "dataset",
+                "query_id",
+                "track",
+                "method",
+                "reference_count",
+                "rrf_constant",
+            ],
+            as_index=False,
+        )
         .agg(
             ndcg_at_10=("ndcg_at_10", "mean"),
             recall_at_20=("recall_at_20", "mean"),
@@ -34,13 +44,18 @@ def _query_means(frame: pd.DataFrame) -> pd.DataFrame:
             sparse_exhausted=("sparse_exhausted", "mean"),
             fallback=("fallback", "mean"),
         )
-        .sort_values(["dataset", "track", "method", "query_id"])
+        .sort_values(
+            ["dataset", "track", "reference_count", "rrf_constant", "method", "query_id"]
+        )
     )
 
 
 def _summary(query_means: pd.DataFrame) -> pd.DataFrame:
     return (
-        query_means.groupby(["dataset", "track", "method"], as_index=False)
+        query_means.groupby(
+            ["dataset", "track", "method", "reference_count", "rrf_constant"],
+            as_index=False,
+        )
         .agg(
             queries=("query_id", "nunique"),
             ndcg_at_10=("ndcg_at_10", "mean"),
@@ -51,12 +66,16 @@ def _summary(query_means: pd.DataFrame) -> pd.DataFrame:
             sparse_exhaustion_rate=("sparse_exhausted", "mean"),
             fallback_rate=("fallback", "mean"),
         )
-        .sort_values(["dataset", "track", "method"])
+        .sort_values(["dataset", "track", "reference_count", "rrf_constant", "method"])
     )
 
 
 def _access_changes(query_means: pd.DataFrame) -> pd.DataFrame:
-    controlled = query_means[query_means["track"] == "controlled"]
+    controlled = query_means[
+        (query_means["track"] == "controlled")
+        & (query_means["reference_count"] == 5)
+        & (query_means["rrf_constant"] == 60)
+    ]
     rows: list[dict[str, object]] = []
     for dataset, data in controlled.groupby("dataset"):
         original = data[data["method"] == "original"].set_index("query_id")
@@ -89,7 +108,11 @@ def _access_changes(query_means: pd.DataFrame) -> pd.DataFrame:
 
 
 def _paired_tests(query_means: pd.DataFrame) -> pd.DataFrame:
-    controlled = query_means[query_means["track"] == "controlled"]
+    controlled = query_means[
+        (query_means["track"] == "controlled")
+        & (query_means["reference_count"] == 5)
+        & (query_means["rrf_constant"] == 60)
+    ]
     proposed = controlled[controlled["method"] == "proposed"]
     rows: list[dict[str, object]] = []
     pvalues: dict[str, float] = {}
@@ -133,7 +156,11 @@ def _paired_tests(query_means: pd.DataFrame) -> pd.DataFrame:
 
 
 def _plot_quality_access(summary: pd.DataFrame, output: Path) -> None:
-    controlled = summary[summary["track"] == "controlled"]
+    controlled = summary[
+        (summary["track"] == "controlled")
+        & (summary["reference_count"] == 5)
+        & (summary["rrf_constant"] == 60)
+    ]
     macro = controlled.groupby("method", as_index=False)[
         ["ndcg_at_10", "dense_depth", "sparse_depth"]
     ].mean()
@@ -173,7 +200,11 @@ def build_report(input_directory: Path, output_directory: Path) -> Path:
     tests.to_csv(output_directory / "primary-paired-tests.csv", index=False)
     _plot_quality_access(summary, output_directory / "quality-access.png")
 
-    controlled = summary[summary["track"] == "controlled"]
+    controlled = summary[
+        (summary["track"] == "controlled")
+        & (summary["reference_count"] == 5)
+        & (summary["rrf_constant"] == 60)
+    ]
     macro = (
         controlled.groupby("method", as_index=False)[list(PRIMARY_METRICS)]
         .mean()

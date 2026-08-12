@@ -81,6 +81,9 @@ def prepare_beir_dataset(
 def unseal_qrels(dataset_id: str, root: Path, lock_path: Path) -> Path:
     if not lock_path.exists():
         raise RuntimeError("pre-held-out lock is required before qrels extraction")
+    from .locking import verify_lock
+
+    verify_lock(root, lock_path)
     manifest_path = root / "data" / "processed" / dataset_id / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if not manifest["heldout"]:

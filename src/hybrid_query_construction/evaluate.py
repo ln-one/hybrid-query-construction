@@ -65,6 +65,7 @@ def _result(
     draw_id: int,
     track: str,
     method: str,
+    reference_count: int,
     dense: RankingArtifact,
     sparse: RankingArtifact,
     qrels: dict[str, int],
@@ -89,6 +90,8 @@ def _result(
         draw_id=draw_id,
         track=track,
         method=method,
+        reference_count=reference_count,
+        rrf_constant=constant,
         ndcg_at_10=ndcg_at_k(fused, qrels, 10),
         recall_at_20=recall_at_k(fused, qrels, 20),
         dense_depth=replay.dense_depth,
@@ -122,6 +125,9 @@ def evaluate_rankings(
     top_k: int = 20,
     constant: int = 60,
     fixed_top_l: tuple[int, ...] = (10, 20, 50, 100, 200, 500, 1000),
+    result_track: str | None = None,
+    include_fidelity: bool = True,
+    output_id: str | None = None,
 ) -> tuple[Path, Path]:
     qrels_path = root / "data" / "processed" / dataset / "qrels.tsv"
     if not qrels_path.exists():
@@ -131,6 +137,11 @@ def evaluate_rankings(
     method_config_sha = sha256_file(root / "configs" / "methods" / "formal-v1.yaml")
     rows: list[QueryResult] = []
     fixed_rows: list[dict[str, object]] = []
+
+    if result_track is None:
+        result_track = "controlled" if reference_count == 5 and constant == 60 else "ablation"
+    if result_track not in {"controlled", "ablation", "robustness", "scale"}:
+        raise ValueError(f"unsupported result track: {result_track}")
 
     with RankingStore(store_path, dataset, document_ids) as store:
         controlled_keys = list(store.keys())
@@ -164,8 +175,9 @@ def evaluate_rankings(
                     dataset=dataset,
                     query_id=query_id,
                     draw_id=draw_id,
-                    track="controlled",
+                    track=result_track,
                     method=method,
+                    reference_count=reference_count,
                     dense=dense,
                     sparse=sparse,
                     qrels=qrels[query_id],
@@ -188,8 +200,10 @@ def evaluate_rankings(
                             "dataset": dataset,
                             "query_id": query_id,
                             "draw_id": draw_id,
-                            "track": "controlled",
+                            "track": result_track,
                             "method": method,
+                            "reference_count": reference_count,
+                            "rrf_constant": constant,
                             "top_l": top_l,
                             "ndcg_at_10": ndcg_at_k(ranking, qrels[query_id], 10),
                             "recall_at_20": recall_at_k(ranking, qrels[query_id], 20),
@@ -198,7 +212,9 @@ def evaluate_rankings(
                     )
 
         fidelity_keys = list(store.keys())
-        for method, (dense_spec, sparse_spec) in FIDELITY_METHODS.items():
+        for method, (dense_spec, sparse_spec) in (
+            FIDELITY_METHODS.items() if include_fidelity else ()
+        ):
             dense_channel = dense_spec.split(":", maxsplit=1)[1]
             method_keys = [
                 (query_id, draw_id, count)
@@ -227,6 +243,7 @@ def evaluate_rankings(
                         draw_id=draw_id,
                         track="fidelity",
                         method=method,
+                        reference_count=count,
                         dense=dense,
                         sparse=sparse,
                         qrels=qrels[query_id],
@@ -237,19 +254,36 @@ def evaluate_rankings(
                 )
 
     output_directory.mkdir(parents=True, exist_ok=True)
-    results_path = output_directory / f"{dataset}.jsonl"
-    fixed_path = output_directory / f"{dataset}-fixed-top-l.jsonl"
+    if output_id is None:
+        output_id = (
+            dataset
+            if result_track == "controlled" and reference_count == 5 and constant == 60
+            else f"{dataset}-{store_path.stem}-{result_track}-r{reference_count}-c{constant}"
+        )
+    results_path = output_directory / f"{output_id}.jsonl"
+    fixed_path = output_directory / f"{output_id}-fixed-top-l.jsonl"
     _write_jsonl(results_path, (row.model_dump(mode="json") for row in rows))
     _write_jsonl(fixed_path, fixed_rows)
     manifest = {
         "schema_version": 1,
+        "protocol_version": "hqc-formal-v1",
         "dataset": dataset,
+        "output_id": output_id,
+        "result_track": result_track,
+        "reference_count": reference_count,
+        "rrf_constant": constant,
+        "top_k": top_k,
+        "fixed_top_l": list(fixed_top_l),
         "results_sha256": sha256_file(results_path),
         "fixed_top_l_sha256": sha256_file(fixed_path),
         "result_rows": len(rows),
         "fixed_top_l_rows": len(fixed_rows),
         "qrels_sha256": sha256_file(qrels_path),
         "ranking_store_sha256": sha256_file(store_path),
+        "protocol_file_sha256": {
+            str(path.relative_to(root)): sha256_file(path)
+            for path in sorted((root / "configs").rglob("*.yaml"))
+        },
     }
-    write_json(output_directory / f"{dataset}-manifest.json", manifest)
+    write_json(output_directory / f"{output_id}-manifest.json", manifest)
     return results_path, fixed_path

@@ -9,7 +9,8 @@ import numpy as np
 
 from .datasets import load_queries
 from .fusion import rank_scores
-from .io import canonical_json, read_jsonl, sha256_bytes
+from .generation import current_commit
+from .io import canonical_json, read_jsonl, sha256_bytes, sha256_file, write_json
 from .java import ensure_java_runtime
 from .methods import (
     contextual_mean,
@@ -123,6 +124,8 @@ def build_rankings(
     query2doc_generation: Path | None = None,
     query_limit: int | None = None,
     reference_counts: Sequence[int] = (1, 3, 5),
+    dense_key: str = "dense",
+    run_id: str = "primary",
 ) -> Path:
     data_directory = root / "data" / "processed" / dataset
     ensure_java_runtime(int(retriever_config["sparse"]["java"]))
@@ -132,9 +135,12 @@ def build_rankings(
         queries = {query_id: queries[query_id] for query_id in sorted(queries)[:query_limit]}
 
     cache = root / "artifacts" / "rankings" / dataset
-    dense_config = retriever_config["dense"]
+    dense_config = retriever_config[dense_key]
     encoder = DenseEncoder(dense_config["model_id"], dense_config["revision"])
-    ids_path, embeddings_path = save_embedding_matrix(corpus_path, encoder, cache / "dense")
+    dense_cache_id = sha256_bytes(canonical_json(dense_config).encode())[:12]
+    ids_path, embeddings_path = save_embedding_matrix(
+        corpus_path, encoder, cache / f"dense-{dense_key}-{dense_cache_id}"
+    )
     document_ids = json.loads(ids_path.read_text(encoding="utf-8"))
     document_embeddings = np.load(embeddings_path, mmap_mode="r")
 
@@ -149,8 +155,9 @@ def build_rankings(
     mugi = load_generations(mugi_generation)
     hyde = load_generations(hyde_generation)
     query2doc = load_generations(query2doc_generation)
-    store_path = cache / "rankings.sqlite3"
-    instruction = dense_config["query_instruction"]
+    store_name = "rankings.sqlite3" if run_id == "primary" else f"rankings-{run_id}.sqlite3"
+    store_path = cache / store_name
+    instruction = dense_config.get("query_instruction", "")
 
     original_vectors = encoder.encode_queries(list(queries.values()), instruction)
     with RankingStore(store_path, dataset, document_ids) as store:
@@ -333,4 +340,34 @@ def build_rankings(
                         fallback=fallback,
                         generation_sha256=digest,
                     )
+    generation_paths = {
+        "bridge": bridge_generation,
+        "mugi": mugi_generation,
+        "hyde": hyde_generation,
+        "query2doc": query2doc_generation,
+    }
+    manifest = {
+        "schema_version": 1,
+        "protocol_version": "hqc-formal-v1",
+        "dataset": dataset,
+        "run_id": run_id,
+        "dense_key": dense_key,
+        "query_limit": query_limit,
+        "reference_counts": list(reference_counts),
+        "code_commit": current_commit(root),
+        "retriever_config_sha256": sha256_bytes(canonical_json(retriever_config).encode()),
+        "corpus_sha256": sha256_file(corpus_path),
+        "queries_sha256": sha256_file(data_directory / "queries.jsonl"),
+        "document_ids_sha256": sha256_file(ids_path),
+        "document_embeddings_sha256": sha256_file(embeddings_path),
+        "ranking_store_sha256": sha256_file(store_path),
+        "generation_inputs": {
+            name: sha256_file(path) if path is not None and path.exists() else None
+            for name, path in generation_paths.items()
+        },
+    }
+    manifest_name = (
+        "rankings-manifest.json" if run_id == "primary" else f"rankings-{run_id}-manifest.json"
+    )
+    write_json(cache / manifest_name, manifest)
     return store_path

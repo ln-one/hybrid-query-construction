@@ -82,8 +82,10 @@ class QueryResult(StrictModel):
     dataset: str
     query_id: str
     draw_id: int
-    track: Literal["controlled", "fidelity", "robustness", "scale", "tiny"]
+    track: Literal["controlled", "fidelity", "ablation", "robustness", "scale", "tiny"]
     method: str
+    reference_count: int = Field(ge=0)
+    rrf_constant: int = Field(gt=0)
     ndcg_at_10: float = Field(ge=0.0, le=1.0)
     recall_at_20: float = Field(ge=0.0, le=1.0)
     dense_depth: int = Field(ge=0)

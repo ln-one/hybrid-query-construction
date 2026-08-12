@@ -90,6 +90,8 @@ def command_rank(args: argparse.Namespace) -> None:
             query2doc_generation=optional_path(args.query2doc_generation),
             query_limit=args.limit,
             reference_counts=tuple(args.reference_counts),
+            dense_key=args.dense_key,
+            run_id=args.run_id,
         )
     )
 
@@ -103,6 +105,9 @@ def command_evaluate(args: argparse.Namespace) -> None:
         output_directory=root / args.output,
         reference_count=args.reference_count,
         constant=args.rrf_constant,
+        result_track=args.result_track,
+        include_fidelity=not args.skip_fidelity,
+        output_id=args.output_id,
     )
     print("\n".join(str(path) for path in results))
 
@@ -171,6 +176,8 @@ def build_parser() -> argparse.ArgumentParser:
     rank.add_argument("--query2doc-generation")
     rank.add_argument("--reference-counts", type=int, nargs="+", default=(1, 3, 5))
     rank.add_argument("--limit", type=int)
+    rank.add_argument("--dense-key", default="dense")
+    rank.add_argument("--run-id", default="primary")
     rank.set_defaults(function=command_rank)
 
     evaluate = subparsers.add_parser("evaluate")
@@ -179,6 +186,11 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--output", default="artifacts/results/raw")
     evaluate.add_argument("--reference-count", type=int, default=5)
     evaluate.add_argument("--rrf-constant", type=int, default=60)
+    evaluate.add_argument(
+        "--result-track", choices=("controlled", "ablation", "robustness", "scale")
+    )
+    evaluate.add_argument("--skip-fidelity", action="store_true")
+    evaluate.add_argument("--output-id")
     evaluate.set_defaults(function=command_evaluate)
 
     snapshots = subparsers.add_parser("snapshots")
