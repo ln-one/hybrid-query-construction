@@ -34,28 +34,35 @@ def read(path: Path) -> list[dict[str, object]]:
 
 
 def main() -> None:
-    if len(sys.argv) != 3:
-        raise SystemExit("usage: verify_generation_compatibility.py FIRST SECOND")
-    first_path, second_path = map(Path, sys.argv[1:])
-    first, second = read(first_path), read(second_path)
+    if len(sys.argv) != 5:
+        raise SystemExit(
+            "usage: verify_generation_compatibility.py QWEN_A QWEN_B MISTRAL_A MISTRAL_B"
+        )
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-    if len(first) != 24 or len(second) != 24:
-        raise RuntimeError("compatibility artifacts must each contain 24 records")
-    if any(row["code_commit"] != commit for row in [*first, *second]):
-        raise RuntimeError("compatibility artifacts were produced by another commit")
-    for index, (left, right) in enumerate(zip(first, second, strict=True)):
-        mismatches = [field for field in FIELDS if left[field] != right[field]]
-        if mismatches:
-            raise RuntimeError(f"record {index} differs in fields: {mismatches}")
-    result = {
+    result: dict[str, object] = {
         "ok": True,
-        "records_per_run": 24,
-        "successful_per_run": sum(row["status"] == "ok" for row in first),
-        "failed_per_run": sum(row["status"] != "ok" for row in first),
-        "retried_per_run": sum(int(row["retry_count"]) for row in first),
         "code_commit": commit,
-        "model_artifact_sha256": first[0]["model_artifact_sha256"],
     }
+    labels = ("qwen", "mistral")
+    for pair_index, label in enumerate(labels):
+        first_path = Path(sys.argv[1 + pair_index * 2])
+        second_path = Path(sys.argv[2 + pair_index * 2])
+        first, second = read(first_path), read(second_path)
+        if len(first) != 24 or len(second) != 24:
+            raise RuntimeError(f"{label} artifacts must each contain 24 records")
+        if any(row["code_commit"] != commit for row in [*first, *second]):
+            raise RuntimeError(f"{label} artifacts were produced by another commit")
+        for index, (left, right) in enumerate(zip(first, second, strict=True)):
+            mismatches = [field for field in FIELDS if left[field] != right[field]]
+            if mismatches:
+                raise RuntimeError(f"{label} record {index} differs in fields: {mismatches}")
+        result[label] = {
+            "records_per_run": 24,
+            "successful_per_run": sum(row["status"] == "ok" for row in first),
+            "failed_per_run": sum(row["status"] != "ok" for row in first),
+            "retried_per_run": sum(int(row["retry_count"]) for row in first),
+            "model_artifact_sha256": first[0]["model_artifact_sha256"],
+        }
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

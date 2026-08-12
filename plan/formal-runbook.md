@@ -25,11 +25,11 @@ uv run hqc prepare-model --model robustness
 make compatibility
 ```
 
-The compatibility artifact must contain 24 draw records, report the pinned Qwen
+Each compatibility artifact must contain 24 draw records and report its pinned model
 revision, unquantized BF16, the pinned MLX-LM backend, all generation attempts, and
-either five valid references or the registered failure for every draw. Repeating the
-command after moving the artifact aside must reproduce query IDs, draw IDs, seeds,
-raw outputs, parsed references, statuses, and attempts exactly.
+either five valid references or the registered failure for every draw. Independent
+runs of both Qwen and Mistral must reproduce query IDs, draw IDs, seeds, raw outputs,
+parsed references, statuses, and attempts exactly.
 A model-load, conversion, BF16, or memory failure stops the formal run. Converted
 weight files have their own manifest and are included in the pre-held-out lock.
 
