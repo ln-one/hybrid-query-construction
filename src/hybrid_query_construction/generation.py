@@ -11,7 +11,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .io import append_jsonl, canonical_json, read_jsonl, sha256_file, stable_seed
-from .models import DecodingConfig, GenerationRecord
+from .models import DecodingConfig, GenerationAttempt, GenerationRecord
 
 
 def parse_references(raw_text: str, expected_count: int) -> tuple[str, ...]:
@@ -57,13 +57,32 @@ class LocalGenerator:
 
     @torch.inference_mode()
     def generate(
-        self, system_prompt: str, query_id: str, query: str, seed: int, decoding: DecodingConfig
+        self,
+        system_prompt: str,
+        query_id: str,
+        query: str,
+        seed: int,
+        decoding: DecodingConfig,
+        previous_invalid_output: str | None = None,
     ) -> tuple[str, int, int, str]:
         user_content = canonical_json({"query_id": query_id, "query": query})
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content},
         ]
+        if previous_invalid_output is not None:
+            messages.extend(
+                [
+                    {"role": "assistant", "content": previous_invalid_output},
+                    {
+                        "role": "user",
+                        "content": (
+                            "The previous output failed strict JSON validation. Return only "
+                            "the requested JSON object with the exact reference count."
+                        ),
+                    },
+                ]
+            )
         rendered = self.tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
@@ -130,15 +149,41 @@ def run_generation(
             finish_reason = "failed"
             status = "generation_failed"
             retry_count = 0
+            attempts: list[GenerationAttempt] = []
             for attempt in range(2):
                 retry_count = attempt
                 raw, prompt_tokens, completion_tokens, finish_reason = generator.generate(
-                    prompt, query_id, queries[query_id], seed, decoding
+                    prompt,
+                    query_id,
+                    queries[query_id],
+                    seed,
+                    decoding,
+                    previous_invalid_output=raw if attempt else None,
                 )
                 try:
                     references = parse_references(raw, expected_count)
-                except (ValueError, json.JSONDecodeError):
+                except (ValueError, json.JSONDecodeError) as error:
+                    attempts.append(
+                        GenerationAttempt(
+                            attempt_index=attempt,
+                            raw_text=raw,
+                            finish_reason=finish_reason,
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
+                            parse_error=f"{type(error).__name__}: {error}",
+                        )
+                    )
                     continue
+                attempts.append(
+                    GenerationAttempt(
+                        attempt_index=attempt,
+                        raw_text=raw,
+                        finish_reason=finish_reason,
+                        prompt_tokens=prompt_tokens,
+                        completion_tokens=completion_tokens,
+                        parse_error=None,
+                    )
+                )
                 status = "ok"
                 break
             record = GenerationRecord(
@@ -160,6 +205,7 @@ def run_generation(
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 retry_count=retry_count,
+                attempts=tuple(attempts),
                 status=status,
                 runtime_lock_sha256=runtime_hash,
                 code_commit=commit,

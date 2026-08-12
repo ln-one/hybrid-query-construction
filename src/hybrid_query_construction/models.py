@@ -19,6 +19,15 @@ class DecodingConfig(StrictModel):
     max_new_tokens: int
 
 
+class GenerationAttempt(StrictModel):
+    attempt_index: int = Field(ge=0, le=1)
+    raw_text: str
+    finish_reason: str
+    prompt_tokens: int = Field(ge=0)
+    completion_tokens: int = Field(ge=0)
+    parse_error: str | None
+
+
 class GenerationRecord(StrictModel):
     schema_version: Literal["1.0"] = "1.0"
     protocol_version: str
@@ -39,10 +48,22 @@ class GenerationRecord(StrictModel):
     prompt_tokens: int = Field(ge=0)
     completion_tokens: int = Field(ge=0)
     retry_count: int = Field(ge=0, le=1)
+    attempts: tuple[GenerationAttempt, ...]
     status: Literal["ok", "generation_failed"]
     runtime_lock_sha256: str
     code_commit: str
     created_at_utc: datetime
+
+    @field_validator("attempts")
+    @classmethod
+    def validate_attempts(
+        cls, attempts: tuple[GenerationAttempt, ...]
+    ) -> tuple[GenerationAttempt, ...]:
+        if not 1 <= len(attempts) <= 2:
+            raise ValueError("one or two generation attempts are required")
+        if tuple(attempt.attempt_index for attempt in attempts) != tuple(range(len(attempts))):
+            raise ValueError("generation attempt indices must be consecutive")
+        return attempts
 
     @field_validator("parsed_references")
     @classmethod

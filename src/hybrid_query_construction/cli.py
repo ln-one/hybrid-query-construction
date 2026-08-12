@@ -12,6 +12,7 @@ from .datasets import (
     prepare_nested_snapshots,
     unseal_qrels,
 )
+from .environment import capture_environment
 from .evaluate import evaluate_rankings
 from .generation import run_generation
 from .locking import create_preheldout_lock
@@ -112,6 +113,13 @@ def command_snapshots(args: argparse.Namespace) -> None:
         print(json.dumps(manifest, ensure_ascii=False))
 
 
+def command_environment(args: argparse.Namespace) -> None:
+    root = repository_root()
+    print(
+        json.dumps(capture_environment(root, root / args.output), ensure_ascii=False, indent=2)
+    )
+
+
 def command_lock(args: argparse.Namespace) -> None:
     root = repository_root()
     print(json.dumps(create_preheldout_lock(root, root / args.output), indent=2))
@@ -177,6 +185,10 @@ def build_parser() -> argparse.ArgumentParser:
     snapshots.add_argument("--dataset", default="trec-covid")
     snapshots.add_argument("--sizes", type=int, nargs="+", required=True)
     snapshots.set_defaults(function=command_snapshots)
+
+    environment = subparsers.add_parser("environment")
+    environment.add_argument("--output", default="artifacts/lock/environment.json")
+    environment.set_defaults(function=command_environment)
 
     lock = subparsers.add_parser("lock")
     lock.add_argument("--output", default="artifacts/lock/pre-heldout-v1.json")

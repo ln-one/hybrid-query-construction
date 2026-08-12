@@ -13,11 +13,10 @@ sparse:
   k1: 0.9
   b: 0.4
   analyzer: DefaultEnglishAnalyzer
-  java: 17
+  java: 21
 robustness_dense:
   model_id: facebook/contriever
   revision: 2bd46a25019aeea091fd42d1f0fd4801675cf699
   pooling: mean
   normalize_embeddings: true
 tie_rule: score_descending_then_utf8_document_id_ascending
-

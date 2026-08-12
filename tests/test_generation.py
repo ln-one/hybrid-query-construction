@@ -1,6 +1,8 @@
 import pytest
+from pydantic import ValidationError
 
 from hybrid_query_construction.generation import parse_references
+from hybrid_query_construction.models import GenerationAttempt
 
 
 def test_parse_exact_reference_object() -> None:
@@ -25,3 +27,15 @@ def test_parse_allows_whole_response_fence_only() -> None:
 def test_parse_rejects_invalid_outputs(raw: str) -> None:
     with pytest.raises((ValueError, __import__("json").JSONDecodeError)):
         parse_references(raw, 2)
+
+
+def test_generation_attempt_requires_valid_index() -> None:
+    with pytest.raises(ValidationError):
+        GenerationAttempt(
+            attempt_index=2,
+            raw_text="bad",
+            finish_reason="length",
+            prompt_tokens=1,
+            completion_tokens=1,
+            parse_error="invalid",
+        )

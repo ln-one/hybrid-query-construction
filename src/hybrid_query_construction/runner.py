@@ -10,6 +10,7 @@ import numpy as np
 from .datasets import load_queries
 from .fusion import rank_scores
 from .io import canonical_json, read_jsonl, sha256_bytes
+from .java import ensure_java_runtime
 from .methods import (
     contextual_mean,
     mugi_sparse_rewrite,
@@ -124,6 +125,7 @@ def build_rankings(
     reference_counts: Sequence[int] = (1, 3, 5),
 ) -> Path:
     data_directory = root / "data" / "processed" / dataset
+    ensure_java_runtime(int(retriever_config["sparse"]["java"]))
     corpus_path = data_directory / "corpus.jsonl"
     queries = load_queries(data_directory / "queries.jsonl")
     if query_limit:
