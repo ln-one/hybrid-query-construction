@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 
 import numpy as np
 
@@ -34,6 +34,32 @@ def stratified_macro_bootstrap(
             np.mean(array[random.integers(0, len(array), size=len(array))]) for array in arrays
         ]
         samples[sample_index] = np.mean(dataset_means)
+    alpha = 1.0 - confidence
+    lower, upper = np.quantile(samples, [alpha / 2.0, 1.0 - alpha / 2.0])
+    return observed, float(lower), float(upper)
+
+
+def stratified_paired_statistic_bootstrap(
+    values: Mapping[str, np.ndarray],
+    statistic: Callable[[np.ndarray], float],
+    *,
+    resamples: int = 10_000,
+    seed: int = 20260813,
+    confidence: float = 0.95,
+) -> tuple[float, float, float]:
+    """Bootstrap a derived paired statistic with equal dataset weight."""
+    if not values or any(len(array) == 0 for array in values.values()):
+        raise ValueError("each dataset needs at least one paired row")
+    arrays = [np.asarray(array, dtype=np.float64) for array in values.values()]
+    observed = float(np.mean([statistic(array) for array in arrays]))
+    random = np.random.default_rng(seed)
+    samples = np.empty(resamples, dtype=np.float64)
+    for sample_index in range(resamples):
+        dataset_statistics = []
+        for array in arrays:
+            indices = random.integers(0, len(array), size=len(array))
+            dataset_statistics.append(statistic(array[indices]))
+        samples[sample_index] = np.mean(dataset_statistics)
     alpha = 1.0 - confidence
     lower, upper = np.quantile(samples, [alpha / 2.0, 1.0 - alpha / 2.0])
     return observed, float(lower), float(upper)

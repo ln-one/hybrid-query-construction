@@ -3,6 +3,7 @@ from __future__ import annotations
 import platform
 import subprocess
 import sys
+from importlib import metadata
 from pathlib import Path
 
 import torch
@@ -31,6 +32,9 @@ def capture_environment(root: Path, output: Path, java_major: int = 21) -> dict[
         "python": sys.version,
         "java": java.strip(),
         "torch": torch.__version__,
+        "mlx": metadata.version("mlx"),
+        "mlx_lm": metadata.version("mlx-lm"),
+        "generation_backend": "mlx_lm_unquantized_bfloat16",
         "mps_available": torch.backends.mps.is_available(),
         "mps_built": torch.backends.mps.is_built(),
         "packages": packages,

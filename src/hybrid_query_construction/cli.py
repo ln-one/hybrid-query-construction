@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+from .audit import formal_progress
 from .datasets import (
     load_queries,
     prepare_beir_dataset,
@@ -15,7 +16,8 @@ from .datasets import (
 from .environment import capture_environment
 from .evaluate import evaluate_rankings
 from .generation import run_generation
-from .locking import create_preheldout_lock
+from .locking import create_preheldout_lock, verify_lock
+from .model_conversion import convert_model
 from .reporting import build_report
 from .runner import build_rankings
 from .tiny import run_tiny
@@ -138,6 +140,12 @@ def command_unseal(args: argparse.Namespace) -> None:
     print(unseal_qrels(args.dataset, root, root / args.lock))
 
 
+def command_verify_lock(args: argparse.Namespace) -> None:
+    root = repository_root()
+    verify_lock(root, root / args.lock)
+    print(json.dumps({"ok": True, "lock": args.lock}, indent=2))
+
+
 def command_report(args: argparse.Namespace) -> None:
     root = repository_root()
     print(build_report(root / args.input, root / args.output, root=root))
@@ -145,6 +153,35 @@ def command_report(args: argparse.Namespace) -> None:
 
 def command_verify(args: argparse.Namespace) -> None:
     print(json.dumps(verify_repository(Path(args.root).resolve()), indent=2))
+
+
+def command_progress(args: argparse.Namespace) -> None:
+    print(
+        json.dumps(
+            formal_progress(repository_root(), require_complete=args.require_complete),
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+def command_prepare_model(args: argparse.Namespace) -> None:
+    root = repository_root()
+    config = yaml.safe_load((root / args.config).read_text(encoding="utf-8"))
+    model = config[args.model]
+    print(
+        json.dumps(
+            convert_model(
+                root / model["local_model_path"],
+                model_id=model["model_id"],
+                revision=model["revision"],
+                dtype=model["dtype"],
+                adopt_existing=args.adopt_existing,
+            ),
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -216,6 +253,10 @@ def build_parser() -> argparse.ArgumentParser:
     unseal.add_argument("--lock", default="artifacts/lock/pre-heldout-v1.json")
     unseal.set_defaults(function=command_unseal)
 
+    verify_lock_parser = subparsers.add_parser("verify-lock")
+    verify_lock_parser.add_argument("--lock", default="artifacts/lock/pre-heldout-v1.json")
+    verify_lock_parser.set_defaults(function=command_verify_lock)
+
     report = subparsers.add_parser("report")
     report.add_argument("--input", required=True)
     report.add_argument("--output", required=True)
@@ -224,6 +265,16 @@ def build_parser() -> argparse.ArgumentParser:
     verify = subparsers.add_parser("verify")
     verify.add_argument("--root", default=".")
     verify.set_defaults(function=command_verify)
+
+    progress = subparsers.add_parser("progress")
+    progress.add_argument("--require-complete", action="store_true")
+    progress.set_defaults(function=command_progress)
+
+    prepare_model = subparsers.add_parser("prepare-model")
+    prepare_model.add_argument("--config", default="configs/generators/formal-v1.yaml")
+    prepare_model.add_argument("--model", choices=("primary", "robustness"), required=True)
+    prepare_model.add_argument("--adopt-existing", action="store_true")
+    prepare_model.set_defaults(function=command_prepare_model)
     return parser
 
 

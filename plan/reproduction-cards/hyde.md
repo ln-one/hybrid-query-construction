@@ -9,8 +9,8 @@
 
 The public task instructions are adapted only to require strict JSON. Eight
 hypothetical passages are generated per draw, matching the official generator's
-default sample count. Dense retrieval averages the original query embedding and all
-hypothetical-passage embeddings, then normalizes the result. Sparse remains the
+default sample count. Dense retrieval averages the hypothetical-passage embeddings
+and normalizes the result. Sparse remains the
 original BM25 query because HyDE is a Dense method.
 
 The eight passages are emitted as one strict JSON record with a 512-token completion

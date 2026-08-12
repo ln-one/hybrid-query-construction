@@ -16,6 +16,7 @@ fi
 
 cd "$repo_root"
 UV_PROJECT_ENVIRONMENT="$temporary_root/venv" uv sync --frozen --extra dev
+UV_PROJECT_ENVIRONMENT="$temporary_root/venv" uv run --frozen hqc verify-lock
 UV_PROJECT_ENVIRONMENT="$temporary_root/venv" uv run --frozen hqc report \
   --input artifacts/results/raw --output "$temporary_root/report"
 

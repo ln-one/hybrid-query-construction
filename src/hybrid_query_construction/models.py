@@ -17,6 +17,7 @@ class DecodingConfig(StrictModel):
     top_k: int
     repetition_penalty: float
     max_new_tokens: int
+    stop_sequence: str
 
 
 class GenerationAttempt(StrictModel):
@@ -40,6 +41,9 @@ class GenerationRecord(StrictModel):
     model_id: str
     model_revision: str
     tokenizer_revision: str
+    backend: str
+    backend_version: str
+    model_artifact_sha256: str
     seed: int = Field(ge=0)
     decoding: DecodingConfig
     raw_text: str

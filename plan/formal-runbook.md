@@ -5,20 +5,35 @@ the repository root. Re-running generation skips completed query/draw records.
 Re-running ranking accepts only the immutable run specification beside its SQLite
 store.
 
+Queries are sorted by ID and processed in fixed batches of eight. Each batch contains
+all three draws for each query and has a seed derived from the protocol, dataset,
+prompt hash, and fixed batch index. Records, parsing, fallback, and aggregation remain
+draw-specific.
+
+`uv run hqc progress` reports exact completed/expected counts at any time. The lock
+command additionally runs `uv run hqc progress --require-complete`; incomplete or
+cross-commit generation and ranking artifacts cannot pass the held-out gate.
+
 ## 0. Environment and compatibility gate
 
 ```bash
 make setup
 make verify
 uv run hqc environment
-uv run hqc generate --dataset scifact --limit 1 --draws 1 \
+uv run hqc prepare-model --model primary
+uv run hqc prepare-model --model robustness
+uv run hqc generate --dataset scifact --limit 8 \
   --prompt prompts/primary-reference-v1.txt \
-  --output artifacts/generations/compat/qwen-scifact-one-v2.jsonl
+  --output artifacts/generations/compat/qwen-scifact-batch-v3.jsonl
 ```
 
-The compatibility artifact must report the pinned Qwen revision, BF16, MPS, all
-generation attempts, and either five valid references or the registered failure.
-A model-load, BF16, or memory failure stops the formal run.
+The compatibility artifact must contain 24 draw records, report the pinned Qwen
+revision, unquantized BF16, the pinned MLX-LM backend, all generation attempts, and
+either five valid references or the registered failure for every draw. Repeating the
+command after moving the artifact aside must reproduce query IDs, draw IDs, seeds,
+raw outputs, parsed references, statuses, and attempts exactly.
+A model-load, conversion, BF16, or memory failure stops the formal run. Converted
+weight files have their own manifest and are included in the pre-held-out lock.
 
 ## 1. Qwen generation before held-out qrels access
 
@@ -131,10 +146,10 @@ for dataset in fiqa arguana webis-touche2020 scidocs; do
       --skip-fidelity --store "artifacts/rankings/$dataset/rankings.sqlite3"
   done
   uv run hqc evaluate --dataset "$dataset" --result-track robustness \
-    --skip-fidelity --output-id "$dataset-mistral" \
+    --skip-fidelity --output-id "${dataset}-mistral" \
     --store "artifacts/rankings/$dataset/rankings-mistral.sqlite3"
   uv run hqc evaluate --dataset "$dataset" --result-track robustness \
-    --skip-fidelity --output-id "$dataset-contriever" \
+    --skip-fidelity --output-id "${dataset}-contriever" \
     --store "artifacts/rankings/$dataset/rankings-contriever.sqlite3"
 done
 
@@ -154,5 +169,6 @@ make verify
 make clean-rebuild
 ```
 
-The clean-room check creates a fresh environment from `uv.lock`, copies only locked
-per-query records, rebuilds `report/`, and compares all output hashes.
+The clean-room check creates a fresh environment from `uv.lock`, rebuilds `report/`
+only from the locked per-query records, and compares the rebuilt directory byte for
+byte with the reference report.

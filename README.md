@@ -12,6 +12,7 @@ cannot be used as held-out evidence.
 
 ```bash
 make setup
+make prepare-models
 make tiny
 make verify
 ```
@@ -21,8 +22,10 @@ make verify
 - `make verify` checks schemas, hashes, deterministic ties, replay parity, tests,
   and repository hygiene.
 
-Formal generation, indexing, retrieval, and evaluation are separate commands so
-that held-out qrels are unavailable until the pre-evaluation lock is written.
+Formal generation, indexing, retrieval, and evaluation are separate commands so that
+held-out document judgments and grades are unavailable until the pre-evaluation lock
+is written. Evaluation-split query membership is prepared in advance because it
+defines which public queries belong to each benchmark test set.
 
 ## Formal command boundary
 

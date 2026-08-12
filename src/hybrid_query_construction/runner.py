@@ -358,7 +358,7 @@ def build_rankings(
                             dense_vector = original_vector
                         else:
                             document_vectors = encoder.encode_documents(references)
-                            dense_vector = reference_mean([original_vector, *document_vectors])
+                            dense_vector = reference_mean(document_vectors)
                         sparse_scores = original_sparse_scores
                     else:
                         reference_count = len(references) or 1

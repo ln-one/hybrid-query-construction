@@ -12,9 +12,15 @@
 ## Data boundary
 
 Development only: SciFact, NFCorpus, TREC-COVID. Held-out: FiQA, ArguAna,
-Touché-2020, SCIDOCS. The generation and ranking phase may read held-out queries
-and corpora but not qrels. Qrels become available only after a lock manifest hashes
-code, configs, prompts, generations, indices, and rankings.
+Touché-2020, SCIDOCS. The generation and ranking phase may read held-out queries,
+their evaluation-split membership, and corpora, but not document judgments or grades.
+Full qrels become available only after a lock manifest hashes code, configs, prompts,
+generations, indices, and rankings.
+
+BEIR archives can contain queries from several splits in one `queries.jsonl`. Dataset
+preparation retains only query IDs present in the selected qrels split. Only this ID
+membership is used before the held-out gate; document IDs and relevance grades remain
+sealed in the source archive.
 
 ## Primary comparison
 
@@ -47,3 +53,7 @@ Any bug discovered after qrels access increments the protocol version and reruns
 affected held-out conditions. No method, prompt, parameter, preferred draw, or dataset
 may be changed in response to held-out results.
 
+The three draws for one query are sampled together in a fixed batch of eight sorted
+queries so they reuse prompt prefill. The batch seed and each draw index are stored.
+Invalid draws from that batch receive one deterministic retry batch with the same seed
+and validation feedback; valid draws from the initial batch are never replaced.

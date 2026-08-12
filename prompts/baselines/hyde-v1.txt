@@ -1,3 +1,4 @@
-Write eight passages that answer the search query. Return one JSON object and no other
-text:
+Write eight passages that answer the search query, each one sentence of at most 25
+words. Return one single-line JSON object and no other text. The final character must
+be `}`:
 {"references":["...","...","...","...","...","...","...","..."]}

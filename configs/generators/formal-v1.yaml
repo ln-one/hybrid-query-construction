@@ -4,7 +4,10 @@ primary:
   revision: fe11104b620d588ccc049ff6631dd3ea002e3d98
   tokenizer_revision: fe11104b620d588ccc049ff6631dd3ea002e3d98
   dtype: bfloat16
-  device: mps
+  backend: mlx_lm
+  backend_version: 0.31.2
+  local_model_path: data/cache/models/qwen2.5-7b-instruct-mlx-bf16
+  query_batch_size: 8
   draws: 3
   reference_count: 5
   decoding:
@@ -14,13 +17,17 @@ primary:
     top_k: 20
     repetition_penalty: 1.0
     max_new_tokens: 256
+    stop_sequence: "}"
   prompt: prompts/primary-reference-v1.txt
 robustness:
   model_id: mistralai/Mistral-7B-Instruct-v0.3
   revision: c170c708c41dac9275d15a8fff4eca08d52bab71
   tokenizer_revision: c170c708c41dac9275d15a8fff4eca08d52bab71
   dtype: bfloat16
-  device: mps
+  backend: mlx_lm
+  backend_version: 0.31.2
+  local_model_path: data/cache/models/mistral-7b-instruct-v0.3-mlx-bf16
+  query_batch_size: 8
   draws: 3
   reference_count: 5
   queries_per_heldout_dataset: 100
@@ -32,6 +39,7 @@ robustness:
     top_k: 20
     repetition_penalty: 1.0
     max_new_tokens: 256
-seed_rule: first_64_bits_sha256_protocol_dataset_query_draw_prompt
+    stop_sequence: "}"
+seed_rule: first_64_bits_sha256_protocol_dataset_prompt_fixed_batch_index
+draw_execution: three_samples_per_query_in_fixed_sorted_query_batches
 failure_policy: one_same_seed_retry_then_original_fallback
-

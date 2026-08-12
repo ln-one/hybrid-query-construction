@@ -16,6 +16,8 @@ def _git(root: Path, *arguments: str) -> str:
 
 
 def create_preheldout_lock(root: Path, output: Path) -> dict[str, object]:
+    from .audit import formal_progress
+
     status = _git(root, "status", "--porcelain", "--untracked-files=all")
     if status:
         raise RuntimeError("tracked protocol must be committed before pre-held-out lock")
@@ -24,6 +26,7 @@ def create_preheldout_lock(root: Path, output: Path) -> dict[str, object]:
     ]
     if any(path.exists() for path in heldout_qrels):
         raise RuntimeError("held-out qrels already extracted; lock cannot be created")
+    formal_progress(root, require_complete=True)
     tracked = _git(root, "ls-files").splitlines()
     files = {
         relative: sha256_file(root / relative)
@@ -35,6 +38,11 @@ def create_preheldout_lock(root: Path, output: Path) -> dict[str, object]:
         for path in sorted(directory.rglob("*")):
             if path.is_file() and path.name != ".gitkeep":
                 generated[str(path.relative_to(root))] = sha256_file(path)
+    model_artifacts = {}
+    for directory in sorted((root / "data" / "cache" / "models").glob("*-mlx-bf16")):
+        for path in sorted(directory.rglob("*")):
+            if path.is_file():
+                model_artifacts[str(path.relative_to(root))] = sha256_file(path)
     heldout_inputs = {}
     for dataset in HELDOUT_DATASETS:
         for name in ("corpus.jsonl", "queries.jsonl", "manifest.json"):
@@ -54,6 +62,7 @@ def create_preheldout_lock(root: Path, output: Path) -> dict[str, object]:
         "tracked_protocol_files": files,
         "heldout_inputs": heldout_inputs,
         "pre_evaluation_artifacts": generated,
+        "model_artifacts": model_artifacts,
         "heldout_qrels_absent": True,
     }
     write_json(output, manifest)
@@ -71,6 +80,10 @@ def verify_lock(root: Path, lock_path: Path) -> None:
         actual = sha256_file(root / relative)
         if actual != expected:
             raise RuntimeError(f"artifact changed after lock: {relative}")
+    for relative, expected in manifest.get("model_artifacts", {}).items():
+        actual = sha256_file(root / relative)
+        if actual != expected:
+            raise RuntimeError(f"model artifact changed after lock: {relative}")
     for relative, expected in manifest["heldout_inputs"].items():
         actual = sha256_file(root / relative)
         if actual != expected:

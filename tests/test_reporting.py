@@ -51,6 +51,19 @@ def test_report_keeps_development_out_of_confirmatory_tables(tmp_path: Path) -> 
     main = pd.read_csv(output / "main-results.csv")
     development = pd.read_csv(output / "development-results.csv")
     tests = pd.read_csv(output / "primary-paired-tests.csv")
+    access_intervals = pd.read_csv(output / "access-macro-bootstrap.csv")
+    classifications = pd.read_csv(output / "outcome-classification.csv")
     assert set(main["dataset"]) == {"fiqa", "arguana", "webis-touche2020", "scidocs"}
     assert set(development["dataset"]) == {"scifact"}
     assert len(tests) == 8
+    assert set(access_intervals["dataset"]) == {"macro_equal_dataset"}
+    assert set(access_intervals["metric"]) == {
+        "dense_total_reduction_pct",
+        "sparse_total_reduction_pct",
+        "dual_depth_improvement_rate",
+    }
+    assert set(classifications["comparison"]) == {
+        "proposed_vs_original",
+        "proposed_vs_bridge_shared",
+    }
+    assert set(classifications["classification"]) <= {"强阳性", "混合", "负面"}

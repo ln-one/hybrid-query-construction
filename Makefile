@@ -1,4 +1,4 @@
-.PHONY: setup tiny test lint verify tables clean-rebuild generate-qwen generate-robustness
+.PHONY: setup tiny test lint verify tables clean-rebuild generate-qwen generate-robustness prepare-models
 
 setup:
 	uv sync --extra dev
@@ -23,6 +23,10 @@ generate-qwen:
 
 generate-robustness:
 	./scripts/run_robustness_generation.sh
+
+prepare-models:
+	uv run hqc prepare-model --model primary
+	uv run hqc prepare-model --model robustness
 
 verify: test lint
 	uv run hqc verify --root .

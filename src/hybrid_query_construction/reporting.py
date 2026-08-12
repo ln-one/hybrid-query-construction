@@ -8,7 +8,12 @@ import numpy as np
 import pandas as pd
 
 from .io import atomic_write_text, read_jsonl
-from .statistics import holm_adjust, stratified_macro_bootstrap, stratified_sign_flip_pvalue
+from .statistics import (
+    holm_adjust,
+    stratified_macro_bootstrap,
+    stratified_paired_statistic_bootstrap,
+    stratified_sign_flip_pvalue,
+)
 
 PRIMARY_METRICS = ("ndcg_at_10", "recall_at_20", "dense_depth", "sparse_depth")
 COMPARATORS = ("original", "bridge_shared")
@@ -104,12 +109,13 @@ def _summary(query_means: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _access_changes(query_means: pd.DataFrame) -> pd.DataFrame:
+def _access_changes(query_means: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     controlled = query_means[
         (query_means["track"] == "controlled")
         & (query_means["reference_count"] == 5)
         & (query_means["rrf_constant"] == 60)
     ]
+    paired_by_method: dict[str, dict[str, np.ndarray]] = {}
     rows: list[dict[str, object]] = []
     for dataset, data in controlled.groupby("dataset"):
         original = data[data["method"] == "original"].set_index("query_id")
@@ -118,10 +124,16 @@ def _access_changes(query_means: pd.DataFrame) -> pd.DataFrame:
             common = original.index.intersection(current.index)
             if common.empty:
                 continue
-            dense_original = original.loc[common, "dense_depth"].to_numpy(float)
-            sparse_original = original.loc[common, "sparse_depth"].to_numpy(float)
-            dense_current = current.loc[common, "dense_depth"].to_numpy(float)
-            sparse_current = current.loc[common, "sparse_depth"].to_numpy(float)
+            paired = np.column_stack(
+                [
+                    original.loc[common, "dense_depth"].to_numpy(float),
+                    original.loc[common, "sparse_depth"].to_numpy(float),
+                    current.loc[common, "dense_depth"].to_numpy(float),
+                    current.loc[common, "sparse_depth"].to_numpy(float),
+                ]
+            )
+            paired_by_method.setdefault(str(method), {})[str(dataset)] = paired
+            dense_original, sparse_original, dense_current, sparse_current = paired.T
             rows.append(
                 {
                     "dataset": dataset,
@@ -138,7 +150,36 @@ def _access_changes(query_means: pd.DataFrame) -> pd.DataFrame:
                     ),
                 }
             )
-    return pd.DataFrame(rows).sort_values(["dataset", "method"])
+    statistics = {
+        "dense_total_reduction_pct": lambda array: (
+            100.0 * (1.0 - array[:, 2].sum() / array[:, 0].sum())
+        ),
+        "sparse_total_reduction_pct": lambda array: (
+            100.0 * (1.0 - array[:, 3].sum() / array[:, 1].sum())
+        ),
+        "dual_depth_improvement_rate": lambda array: float(
+            np.mean((array[:, 2] < array[:, 0]) & (array[:, 3] < array[:, 1]))
+        ),
+    }
+    interval_rows: list[dict[str, object]] = []
+    for method, by_dataset in paired_by_method.items():
+        for metric, statistic in statistics.items():
+            estimate, lower, upper = stratified_paired_statistic_bootstrap(
+                by_dataset, statistic
+            )
+            interval_rows.append(
+                {
+                    "dataset": "macro_equal_dataset",
+                    "method": method,
+                    "metric": metric,
+                    "estimate": estimate,
+                    "ci95_lower": lower,
+                    "ci95_upper": upper,
+                }
+            )
+    detail = pd.DataFrame(rows).sort_values(["dataset", "method"])
+    intervals = pd.DataFrame(interval_rows).sort_values(["method", "metric"])
+    return detail, intervals
 
 
 def _paired_tests(query_means: pd.DataFrame) -> pd.DataFrame:
@@ -189,6 +230,25 @@ def _paired_tests(query_means: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _classify_confirmatory_outcomes(tests: pd.DataFrame) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    for comparison, data in tests.groupby("comparison", sort=True):
+        if (data["ci95_lower"] > 0.0).all():
+            label = "强阳性"
+        elif (data["ci95_upper"] < 0.0).all():
+            label = "负面"
+        else:
+            label = "混合"
+        rows.append(
+            {
+                "comparison": comparison,
+                "classification": label,
+                "rule": "四项有利差值的95%区间同向，否则为混合",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def _plot_quality_access(summary: pd.DataFrame, output: Path) -> None:
     controlled = summary[
         (summary["track"] == "controlled")
@@ -217,6 +277,62 @@ def _plot_quality_access(summary: pd.DataFrame, output: Path) -> None:
     plt.close(fig)
 
 
+def _plot_fixed_top_l(summary: pd.DataFrame, output: Path) -> None:
+    selected = summary[
+        summary["dataset"].isin(HELDOUT_DATASETS)
+        & summary["method"].isin(("original", "bridge_shared", "proposed"))
+        & (summary["reference_count"] == 5)
+        & (summary["rrf_constant"] == 60)
+    ]
+    if selected.empty:
+        return
+    macro = selected.groupby(["method", "top_l"], as_index=False)[
+        ["ndcg_at_10", "complete_top20_exact_rate"]
+    ].mean()
+    fig, axes = plt.subplots(1, 2, figsize=(10.2, 4.2))
+    for method, data in macro.groupby("method"):
+        axes[0].plot(data["top_l"], data["ndcg_at_10"], marker="o", label=method)
+        axes[1].plot(
+            data["top_l"], data["complete_top20_exact_rate"], marker="o", label=method
+        )
+    for axis in axes:
+        axis.set_xscale("log")
+        axis.set_xlabel("Fixed Top-L")
+        axis.grid(alpha=0.2)
+    axes[0].set_ylabel("Dataset-macro nDCG@10")
+    axes[1].set_ylabel("Complete Top-20 exact rate")
+    axes[1].legend(fontsize=8)
+    fig.tight_layout()
+    fig.savefig(output, dpi=220)
+    plt.close(fig)
+
+
+def _plot_scale_trends(summary: pd.DataFrame, output: Path) -> None:
+    selected = summary[
+        (summary["track"] == "scale")
+        & summary["method"].isin(("original", "proposed"))
+        & (summary["reference_count"] == 5)
+        & (summary["rrf_constant"] == 60)
+    ].copy()
+    if selected.empty:
+        return
+    selected["documents"] = selected["dataset"].str.rsplit("-", n=1).str[-1].astype(int)
+    fig, axes = plt.subplots(1, 2, figsize=(10.2, 4.2))
+    for method, data in selected.sort_values("documents").groupby("method"):
+        axes[0].plot(data["documents"], data["dense_depth"], marker="o", label=method)
+        axes[1].plot(data["documents"], data["sparse_depth"], marker="o", label=method)
+    for axis in axes:
+        axis.set_xscale("log")
+        axis.set_xlabel("Corpus documents")
+        axis.grid(alpha=0.2)
+    axes[0].set_ylabel("Mean Dense stopping depth")
+    axes[1].set_ylabel("Mean Sparse stopping depth")
+    axes[1].legend(fontsize=8)
+    fig.tight_layout()
+    fig.savefig(output, dpi=220)
+    plt.close(fig)
+
+
 def build_report(
     input_directory: Path, output_directory: Path, root: Path | None = None
 ) -> Path:
@@ -228,8 +344,9 @@ def build_report(
     query_means = _query_means(frame)
     summary = _summary(query_means)
     heldout_query_means = query_means[query_means["dataset"].isin(HELDOUT_DATASETS)]
-    access = _access_changes(heldout_query_means)
+    access, access_intervals = _access_changes(heldout_query_means)
     tests = _paired_tests(heldout_query_means)
+    classifications = _classify_confirmatory_outcomes(tests)
 
     query_means.to_csv(output_directory / "per-query-draw-mean.csv", index=False)
     summary.to_csv(output_directory / "all-results.csv", index=False)
@@ -249,6 +366,14 @@ def build_report(
     summary[summary["track"] == "ablation"].to_csv(
         output_directory / "ablation-results.csv", index=False
     )
+    summary[
+        summary["track"].isin(("controlled", "ablation"))
+        & (summary["rrf_constant"] == 60)
+    ].to_csv(output_directory / "reference-count-results.csv", index=False)
+    summary[
+        summary["track"].isin(("controlled", "ablation"))
+        & (summary["reference_count"] == 5)
+    ].to_csv(output_directory / "rrf-constant-results.csv", index=False)
     summary[summary["track"] == "robustness"].to_csv(
         output_directory / "robustness-results.csv", index=False
     )
@@ -256,7 +381,9 @@ def build_report(
         output_directory / "scale-results.csv", index=False
     )
     access.to_csv(output_directory / "access-changes-vs-original.csv", index=False)
+    access_intervals.to_csv(output_directory / "access-macro-bootstrap.csv", index=False)
     tests.to_csv(output_directory / "primary-paired-tests.csv", index=False)
+    classifications.to_csv(output_directory / "outcome-classification.csv", index=False)
     _plot_quality_access(heldout_main, output_directory / "quality-access.png")
 
     fixed_rows = load_fixed_top_l_rows(input_directory)
@@ -284,6 +411,9 @@ def build_report(
             )
         )
         fixed_summary.to_csv(output_directory / "fixed-top-l-results.csv", index=False)
+        _plot_fixed_top_l(fixed_summary, output_directory / "fixed-top-l.png")
+
+    _plot_scale_trends(summary, output_directory / "scale-trends.png")
 
     generation_summary = pd.DataFrame()
     if root is not None:
@@ -331,9 +461,17 @@ def build_report(
         "",
         access.to_markdown(index=False, floatfmt=".3f"),
         "",
+        "### 数据集等权访问变化及 95% 区间",
+        "",
+        access_intervals.to_markdown(index=False, floatfmt=".4f"),
+        "",
         "## 预注册主比较",
         "",
         tests.to_markdown(index=False, floatfmt=".6f"),
+        "",
+        "### 结论分类",
+        "",
+        classifications.to_markdown(index=False),
         "",
         "## 生成成本",
         "",

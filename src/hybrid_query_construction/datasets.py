@@ -56,8 +56,29 @@ def prepare_beir_dataset(
             "queries": _unique_member(archive, "queries.jsonl"),
             "qrels": _unique_member(archive, f"qrels/{split}.tsv"),
         }
-        for kind in ("corpus", "queries"):
-            atomic_write_bytes(processed / f"{kind}.jsonl", archive.read(members[kind]))
+        atomic_write_bytes(processed / "corpus.jsonl", archive.read(members["corpus"]))
+        qrels_text = archive.read(members["qrels"]).decode("utf-8")
+        qrels_reader = csv.DictReader(io.StringIO(qrels_text), delimiter="\t")
+        evaluation_query_ids = {
+            str(row.get("query-id", row.get("query_id"))) for row in qrels_reader
+        }
+        query_rows = [
+            row
+            for row in (
+                json.loads(line)
+                for line in archive.read(members["queries"]).decode("utf-8").splitlines()
+                if line.strip()
+            )
+            if str(row.get("_id", row.get("id"))) in evaluation_query_ids
+        ]
+        selected_query_ids = {str(row.get("_id", row.get("id"))) for row in query_rows}
+        if selected_query_ids != evaluation_query_ids:
+            missing = evaluation_query_ids - selected_query_ids
+            raise RuntimeError(f"split queries absent from queries.jsonl: {len(missing)}")
+        atomic_write_text(
+            processed / "queries.jsonl",
+            "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in query_rows),
+        )
         if not heldout:
             atomic_write_bytes(processed / "qrels.tsv", archive.read(members["qrels"]))
 
@@ -71,6 +92,8 @@ def prepare_beir_dataset(
         "archive_sha256": sha256_file(archive_path),
         "corpus_sha256": sha256_file(processed / "corpus.jsonl"),
         "queries_sha256": sha256_file(processed / "queries.jsonl"),
+        "evaluation_query_count": len(evaluation_query_ids),
+        "query_selection": "query_ids_present_in_selected_qrels_split_without_labels",
         "qrels_state": "sealed_in_archive" if heldout else "development_available",
         "qrels_member": members["qrels"],
     }
