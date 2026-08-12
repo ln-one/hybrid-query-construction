@@ -1,0 +1,3 @@
+Write eight scientific-paper passages that support or refute the claim supplied as the
+search query. Return one JSON object and no other text:
+{"references":["...","...","...","...","...","...","...","..."]}

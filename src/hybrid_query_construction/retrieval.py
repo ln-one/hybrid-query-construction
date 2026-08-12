@@ -52,13 +52,11 @@ def dense_ranking(
     document_ids: Sequence[str],
     document_embeddings: NDArray[np.float32],
     query_embedding: NDArray[np.float32],
-) -> tuple[list[str], dict[str, float]]:
+) -> list[str]:
     scores = document_embeddings @ query_embedding
-    order = sorted(
-        range(len(document_ids)), key=lambda index: (-float(scores[index]), document_ids[index])
-    )
-    ranking = [document_ids[index] for index in order]
-    return ranking, {document_ids[index]: float(scores[index]) for index in order}
+    identifiers = np.asarray(document_ids, dtype=str)
+    order = np.lexsort((identifiers, -scores))
+    return [document_ids[int(index)] for index in order]
 
 
 def prepare_lucene_collection(corpus_path: Path, output_directory: Path) -> tuple[Path, int]:

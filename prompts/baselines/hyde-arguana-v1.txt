@@ -1,2 +1,3 @@
-Write a counterargument to the passage supplied as the search query. Return one JSON
-object and no other text: {"references":["..."]}
+Write eight counterarguments to the passage supplied as the search query. Return one
+JSON object and no other text:
+{"references":["...","...","...","...","...","...","...","..."]}

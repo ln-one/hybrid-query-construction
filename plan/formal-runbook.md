@@ -35,14 +35,20 @@ for dataset in scifact nfcorpus trec-covid fiqa arguana webis-touche2020 scidocs
     --output "artifacts/generations/query2doc/$dataset.jsonl"
 done
 
-uv run hqc generate --dataset fiqa --reference-count 1 \
+uv run hqc generate --dataset fiqa --reference-count 8 --max-new-tokens 512 \
   --prompt prompts/baselines/hyde-fiqa-v1.txt \
   --output artifacts/generations/hyde/fiqa.jsonl
-uv run hqc generate --dataset arguana --reference-count 1 \
+uv run hqc generate --dataset arguana --reference-count 8 --max-new-tokens 512 \
   --prompt prompts/baselines/hyde-arguana-v1.txt \
   --output artifacts/generations/hyde/arguana.jsonl
-for dataset in scifact nfcorpus trec-covid webis-touche2020 scidocs; do
-  uv run hqc generate --dataset "$dataset" --reference-count 1 \
+uv run hqc generate --dataset scifact --reference-count 8 --max-new-tokens 512 \
+  --prompt prompts/baselines/hyde-scifact-v1.txt \
+  --output artifacts/generations/hyde/scifact.jsonl
+uv run hqc generate --dataset trec-covid --reference-count 8 --max-new-tokens 512 \
+  --prompt prompts/baselines/hyde-trec-covid-v1.txt \
+  --output artifacts/generations/hyde/trec-covid.jsonl
+for dataset in nfcorpus webis-touche2020 scidocs; do
+  uv run hqc generate --dataset "$dataset" --reference-count 8 --max-new-tokens 512 \
     --prompt prompts/baselines/hyde-v1.txt \
     --output "artifacts/generations/hyde/$dataset.jsonl"
 done

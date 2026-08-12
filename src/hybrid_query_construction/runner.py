@@ -75,7 +75,7 @@ def _put_ranking(
         reference_count=reference_count,
     ):
         return
-    ranking, _ = dense_ranking(document_ids, document_embeddings, query_vector)
+    ranking = dense_ranking(document_ids, document_embeddings, query_vector)
     store.put(
         query_id=query_id,
         draw_id=draw_id,
@@ -353,7 +353,7 @@ def build_rankings(
                                 mugi_sparse_rewrite(query, references, beta=4)
                             )
                     elif method_name == "hyde":
-                        reference_count = len(references) or 1
+                        reference_count = len(references) or 8
                         if fallback:
                             dense_vector = original_vector
                         else:

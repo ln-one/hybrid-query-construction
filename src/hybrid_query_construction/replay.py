@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import heapq
 from collections.abc import Sequence
 
 from .fusion import complete_wrrf, wrrf_contribution
@@ -10,48 +11,111 @@ def _precedes(score_a: float, id_a: str, score_b: float, id_b: str) -> bool:
     return score_a > score_b or (score_a == score_b and id_a < id_b)
 
 
-def _certified_top_k(
-    observed: dict[str, list[float | None]],
-    positions: tuple[int, int],
-    lengths: tuple[int, int],
-    universe_size: int,
-    top_k: int,
-    constant: int,
-) -> list[str] | None:
-    if len(observed) < top_k:
-        return None
-    exhausted = (positions[0] == lengths[0], positions[1] == lengths[1])
-    next_bounds = tuple(
-        0.0 if exhausted[index] else wrrf_contribution(positions[index] + 1, constant)
-        for index in range(2)
-    )
-    rows: list[tuple[str, float, float]] = []
-    for document_id, contributions in observed.items():
-        lower = sum(value or 0.0 for value in contributions)
-        upper = lower + sum(
-            next_bounds[index]
-            for index, value in enumerate(contributions)
-            if value is None and not exhausted[index]
+class _IncrementalCertificate:
+    """Maintain the replay certificate without sorting every observed item per step."""
+
+    def __init__(self, universe_size: int, top_k: int, constant: int) -> None:
+        self.universe_size = universe_size
+        self.top_k = top_k
+        self.constant = constant
+        self.contributions: dict[str, list[float | None]] = {}
+        self.versions: dict[str, int] = {}
+        self.lower_heap: list[tuple[float, str, int]] = []
+        self.category_heaps: dict[int, list[tuple[float, str, int]]] = {
+            1: [],
+            2: [],
+            3: [],
+        }
+
+    def observe(self, document_id: str, channel: int, contribution: float) -> None:
+        values = self.contributions.setdefault(document_id, [None, None])
+        values[channel] = contribution
+        version = self.versions.get(document_id, 0) + 1
+        self.versions[document_id] = version
+        lower = sum(value or 0.0 for value in values)
+        category = (1 if values[0] is not None else 0) | (2 if values[1] is not None else 0)
+        entry = (-lower, document_id, version)
+        heapq.heappush(self.lower_heap, entry)
+        heapq.heappush(self.category_heaps[category], entry)
+
+    def _valid(self, entry: tuple[float, str, int], category: int | None = None) -> bool:
+        _, document_id, version = entry
+        if self.versions.get(document_id) != version:
+            return False
+        if category is None:
+            return True
+        values = self.contributions[document_id]
+        current = (1 if values[0] is not None else 0) | (2 if values[1] is not None else 0)
+        return current == category
+
+    def _top_documents(self) -> list[str]:
+        selected: list[tuple[float, str, int]] = []
+        while self.lower_heap and len(selected) < self.top_k:
+            entry = heapq.heappop(self.lower_heap)
+            if self._valid(entry):
+                selected.append(entry)
+        for entry in selected:
+            heapq.heappush(self.lower_heap, entry)
+        return [entry[1] for entry in selected]
+
+    def _best_outsider(self, category: int, winners: set[str]) -> str | None:
+        heap = self.category_heaps[category]
+        held: list[tuple[float, str, int]] = []
+        result: str | None = None
+        while heap:
+            entry = heapq.heappop(heap)
+            if not self._valid(entry, category):
+                continue
+            held.append(entry)
+            if entry[1] not in winners:
+                result = entry[1]
+                break
+        for entry in held:
+            heapq.heappush(heap, entry)
+        return result
+
+    def certify(self, positions: Sequence[int], lengths: Sequence[int]) -> list[str] | None:
+        if len(self.contributions) < self.top_k:
+            return None
+        next_bounds = tuple(
+            0.0
+            if positions[index] == lengths[index]
+            else wrrf_contribution(positions[index] + 1, self.constant)
+            for index in range(2)
         )
-        rows.append((document_id, lower, upper))
-    rows.sort(key=lambda row: (-row[1], row[0]))
-    winners = rows[:top_k]
-    outsiders = rows[top_k:]
+        winners = self._top_documents()
+        if len(winners) < self.top_k:
+            return None
 
-    for left_index, left in enumerate(winners):
-        for right in winners[left_index + 1 :]:
-            if not _precedes(left[1], left[0], right[2], right[0]):
+        def lower(document_id: str) -> float:
+            return sum(value or 0.0 for value in self.contributions[document_id])
+
+        def upper(document_id: str) -> float:
+            values = self.contributions[document_id]
+            return lower(document_id) + sum(
+                next_bounds[index] for index, value in enumerate(values) if value is None
+            )
+
+        for left_index, left_id in enumerate(winners):
+            for right_id in winners[left_index + 1 :]:
+                if not _precedes(lower(left_id), left_id, upper(right_id), right_id):
+                    return None
+
+        winner_set = set(winners)
+        boundary_id = winners[-1]
+        boundary_lower = lower(boundary_id)
+        for category in (1, 2, 3):
+            outsider_id = self._best_outsider(category, winner_set)
+            if outsider_id is not None and not _precedes(
+                boundary_lower, boundary_id, upper(outsider_id), outsider_id
+            ):
                 return None
-    boundary = winners[-1]
-    for outsider in outsiders:
-        if not _precedes(boundary[1], boundary[0], outsider[2], outsider[0]):
-            return None
 
-    if len(observed) < universe_size:
-        fully_unseen_upper = next_bounds[0] + next_bounds[1]
-        if boundary[1] <= fully_unseen_upper:
-            return None
-    return [row[0] for row in winners]
+        if len(self.contributions) < self.universe_size:
+            fully_unseen_upper = next_bounds[0] + next_bounds[1]
+            if boundary_lower <= fully_unseen_upper:
+                return None
+        return winners
 
 
 def replay_complete_wrrf(
@@ -73,19 +137,12 @@ def replay_complete_wrrf(
 
     positions = [0, 0]
     rankings = (dense, sparse)
-    observed: dict[str, list[float | None]] = {}
+    certificate = _IncrementalCertificate(len(universe), top_k, constant)
     checks = 0
     trace: list[tuple[int, int, str]] = []
     while True:
         checks += 1
-        certified = _certified_top_k(
-            observed,
-            (positions[0], positions[1]),
-            (len(dense), len(sparse)),
-            len(universe),
-            top_k,
-            constant,
-        )
+        certified = certificate.certify(positions, (len(dense), len(sparse)))
         if certified is not None:
             expected = complete_wrrf((dense, sparse), top_k=top_k, constant=constant)
             if certified != expected:
@@ -108,8 +165,7 @@ def replay_complete_wrrf(
         channel = min(available, key=lambda index: (-next_bounds[index], index))
         rank = positions[channel] + 1
         document_id = rankings[channel][positions[channel]]
-        contributions = observed.setdefault(document_id, [None, None])
-        contributions[channel] = wrrf_contribution(rank, constant)
+        certificate.observe(document_id, channel, wrrf_contribution(rank, constant))
         positions[channel] += 1
         if keep_trace:
             trace.append((positions[0], positions[1], "dense" if channel == 0 else "sparse"))

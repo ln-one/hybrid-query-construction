@@ -48,7 +48,10 @@ def command_prepare(args: argparse.Namespace) -> None:
 def command_generate(args: argparse.Namespace) -> None:
     root = repository_root()
     config = yaml.safe_load((root / args.config).read_text(encoding="utf-8"))
-    model = config[args.model]
+    model = dict(config[args.model])
+    model["decoding"] = dict(model["decoding"])
+    if args.max_new_tokens is not None:
+        model["decoding"]["max_new_tokens"] = args.max_new_tokens
     queries = load_queries(root / "data" / "processed" / args.dataset / "queries.jsonl")
     if args.hash_limit:
         from .io import hash_selected
@@ -166,6 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--hash-limit", type=int)
     generate.add_argument("--reference-count", type=int)
     generate.add_argument("--draws", type=int)
+    generate.add_argument("--max-new-tokens", type=int)
     generate.set_defaults(function=command_generate)
 
     rank = subparsers.add_parser("rank")
