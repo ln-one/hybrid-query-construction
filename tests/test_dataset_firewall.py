@@ -1,0 +1,30 @@
+import json
+import zipfile
+from pathlib import Path
+
+import pytest
+
+from hybrid_query_construction.datasets import prepare_beir_dataset, unseal_qrels
+
+
+def _fixture_archive(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr(
+            "fixture/corpus.jsonl", json.dumps({"_id": "d1", "text": "text"}) + "\n"
+        )
+        archive.writestr(
+            "fixture/queries.jsonl", json.dumps({"_id": "q1", "text": "query"}) + "\n"
+        )
+        archive.writestr("fixture/qrels/test.tsv", "query-id\tcorpus-id\tscore\nq1\td1\t1\n")
+
+
+def test_heldout_qrels_remain_sealed_until_lock(tmp_path: Path) -> None:
+    archive = tmp_path / "source.zip"
+    _fixture_archive(archive)
+    manifest = prepare_beir_dataset(
+        "fixture", archive.as_uri(), tmp_path, heldout=True, split="test"
+    )
+    assert manifest["qrels_state"] == "sealed_in_archive"
+    assert not (tmp_path / "data/processed/fixture/qrels.tsv").exists()
+    with pytest.raises(RuntimeError):
+        unseal_qrels("fixture", tmp_path, tmp_path / "missing-lock.json")

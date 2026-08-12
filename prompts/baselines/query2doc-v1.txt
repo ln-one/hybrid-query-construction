@@ -1,0 +1,4 @@
+Write a concise pseudo-document likely to be relevant to the search query. Include
+useful terms that a relevant document may contain. Return one JSON object and no
+other text: {"references":["..."]}
+

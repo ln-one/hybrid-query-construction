@@ -1,0 +1,19 @@
+schema_version: 1
+protocol_version: hqc-formal-v1
+provider: beir
+base_url: https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets
+development:
+  - {id: scifact, archive: scifact.zip, split: test}
+  - {id: nfcorpus, archive: nfcorpus.zip, split: test}
+  - {id: trec-covid, archive: trec-covid.zip, split: test}
+heldout:
+  - {id: fiqa, archive: fiqa.zip, split: test}
+  - {id: arguana, archive: arguana.zip, split: test}
+  - {id: webis-touche2020, archive: webis-touche2020.zip, split: test}
+  - {id: scidocs, archive: scidocs.zip, split: test}
+scale:
+  dataset: trec-covid
+  nested_sizes: [25000, 50000, 100000, 171332]
+  selection: sha256_docid_ascending_with_all_relevant_documents_retained
+heldout_qrels_policy: archive_only_until_preheldout_lock
+

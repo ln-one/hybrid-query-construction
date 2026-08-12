@@ -1,0 +1,23 @@
+schema_version: 1
+dense:
+  model_id: BAAI/bge-small-en-v1.5
+  revision: 5c38ec7c405ec4b44b94cc5a9bb96e735b38267a
+  query_instruction: "Represent this sentence for searching relevant passages: "
+  normalize_embeddings: true
+  similarity: dot
+  max_length: 512
+sparse:
+  implementation: pyserini
+  version: 2.3.0
+  scorer: lucene_bm25
+  k1: 0.9
+  b: 0.4
+  analyzer: DefaultEnglishAnalyzer
+  java: 17
+robustness_dense:
+  model_id: facebook/contriever
+  revision: 2bd46a25019aeea091fd42d1f0fd4801675cf699
+  pooling: mean
+  normalize_embeddings: true
+tie_rule: score_descending_then_utf8_document_id_ascending
+

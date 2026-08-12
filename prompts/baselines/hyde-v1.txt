@@ -1,0 +1,4 @@
+Write a concise hypothetical passage that would answer the search query. Preserve
+the query's entities and constraints. Return one JSON object and no other text:
+{"references":["..."]}
+

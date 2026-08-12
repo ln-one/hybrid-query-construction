@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hybrid-query-construction"
+version = "0.1.0"
+description = "Reproducible experiments for asymmetric hybrid query construction"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Anonymous" }]
+dependencies = [
+  "jsonschema==4.26.0",
+  "matplotlib==3.11.1",
+  "numpy==2.5.2",
+  "pandas==3.0.5",
+  "pyarrow==25.0.1",
+  "pydantic==2.13.4",
+  "pyserini==2.3.0",
+  "pyyaml==6.0.3",
+  "requests==2.34.2",
+  "scipy==1.18.0",
+  "sentence-transformers==5.7.0",
+  "statsmodels==0.14.6",
+  "torch==2.13.0",
+  "transformers==5.15.0",
+  "zstandard==0.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.1.1",
+  "ruff==0.16.2",
+]
+
+[project.scripts]
+hqc = "hybrid_query_construction.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hybrid_query_construction"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 96
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF"]
+ignore = ["RUF001"]

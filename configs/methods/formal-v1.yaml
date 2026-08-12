@@ -1,0 +1,35 @@
+schema_version: 1
+reference_counts: [1, 3, 5]
+primary_reference_count: 5
+methods:
+  original:
+    dense: original
+    sparse: original
+  bridge_shared:
+    dense: contextual_mean
+    sparse: rewrite
+  dense_only:
+    dense: orthogonal_residual
+    sparse: original
+  sparse_only:
+    dense: original
+    sparse: score_product_anchor
+  proposed:
+    dense: orthogonal_residual
+    sparse: score_product_anchor
+  mugi:
+    dense: contextual_mean
+    sparse: mugi_beta_concat
+    beta: 4
+  hyde:
+    dense: reference_mean
+    sparse: original
+  query2doc:
+    dense: query_reference_concat
+    sparse: query_repeated_with_reference
+    original_query_repetitions: 5
+sparse_rewrite_primary: original_once_then_references_once
+appendix_sparse:
+  - boolean_original_mask
+  - references_only
+
