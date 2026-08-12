@@ -94,7 +94,13 @@ def convert_model(
 
     from mlx_lm import convert
 
-    source = Path(snapshot_download(model_id, revision=revision))
+    source = Path(
+        snapshot_download(
+            model_id,
+            revision=revision,
+            ignore_patterns=("consolidated.safetensors", "params.json"),
+        )
+    )
     convert(str(source), mlx_path=str(model_directory), dtype=dtype)
     return write_model_artifact_manifest(
         model_directory, model_id=model_id, revision=revision, dtype=dtype
