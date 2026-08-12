@@ -1,4 +1,4 @@
-.PHONY: setup tiny test lint verify tables clean-rebuild generate-qwen generate-robustness prepare-models
+.PHONY: setup tiny test lint verify tables clean-rebuild generate-qwen generate-robustness prepare-models compatibility formal-preheldout formal-evaluate
 
 setup:
 	uv sync --extra dev
@@ -27,6 +27,15 @@ generate-robustness:
 prepare-models:
 	uv run hqc prepare-model --model primary
 	uv run hqc prepare-model --model robustness
+
+compatibility:
+	./scripts/run_generation_compatibility.sh
+
+formal-preheldout:
+	./scripts/run_formal_preheldout.sh
+
+formal-evaluate:
+	./scripts/run_formal_evaluation.sh
 
 verify: test lint
 	uv run hqc verify --root .

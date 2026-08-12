@@ -22,9 +22,7 @@ make verify
 uv run hqc environment
 uv run hqc prepare-model --model primary
 uv run hqc prepare-model --model robustness
-uv run hqc generate --dataset scifact --limit 8 \
-  --prompt prompts/primary-reference-v1.txt \
-  --output artifacts/generations/compat/qwen-scifact-batch-v3.jsonl
+make compatibility
 ```
 
 The compatibility artifact must contain 24 draw records, report the pinned Qwen
@@ -139,23 +137,26 @@ for dataset in fiqa arguana webis-touche2020 scidocs; do
     --store "artifacts/rankings/$dataset/rankings.sqlite3"
   for references in 1 3; do
     uv run hqc evaluate --dataset "$dataset" --reference-count "$references" \
-      --skip-fidelity --store "artifacts/rankings/$dataset/rankings.sqlite3"
+      --skip-fidelity --skip-fixed-top-l \
+      --store "artifacts/rankings/$dataset/rankings.sqlite3"
   done
   for constant in 2 20 100; do
     uv run hqc evaluate --dataset "$dataset" --rrf-constant "$constant" \
-      --skip-fidelity --store "artifacts/rankings/$dataset/rankings.sqlite3"
+      --skip-fidelity --skip-fixed-top-l \
+      --store "artifacts/rankings/$dataset/rankings.sqlite3"
   done
   uv run hqc evaluate --dataset "$dataset" --result-track robustness \
-    --skip-fidelity --output-id "${dataset}-mistral" \
+    --skip-fidelity --skip-fixed-top-l --output-id "${dataset}-mistral" \
     --store "artifacts/rankings/$dataset/rankings-mistral.sqlite3"
   uv run hqc evaluate --dataset "$dataset" --result-track robustness \
-    --skip-fidelity --output-id "${dataset}-contriever" \
+    --skip-fidelity --skip-fixed-top-l --output-id "${dataset}-contriever" \
     --store "artifacts/rankings/$dataset/rankings-contriever.sqlite3"
 done
 
 for dataset in trec-covid-25000 trec-covid-50000 trec-covid-100000 trec-covid-171332; do
   uv run hqc evaluate --dataset "$dataset" --result-track scale \
-    --skip-fidelity --store "artifacts/rankings/$dataset/rankings.sqlite3"
+    --skip-fidelity --skip-fixed-top-l \
+    --store "artifacts/rankings/$dataset/rankings.sqlite3"
 done
 ```
 

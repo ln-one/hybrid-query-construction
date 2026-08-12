@@ -110,6 +110,7 @@ def command_evaluate(args: argparse.Namespace) -> None:
         output_directory=root / args.output,
         reference_count=args.reference_count,
         constant=args.rrf_constant,
+        fixed_top_l=() if args.skip_fixed_top_l else (10, 20, 50, 100, 200, 500, 1000),
         result_track=args.result_track,
         include_fidelity=not args.skip_fidelity,
         output_id=args.output_id,
@@ -232,6 +233,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--result-track", choices=("controlled", "ablation", "robustness", "scale")
     )
     evaluate.add_argument("--skip-fidelity", action="store_true")
+    evaluate.add_argument("--skip-fixed-top-l", action="store_true")
     evaluate.add_argument("--output-id")
     evaluate.set_defaults(function=command_evaluate)
 

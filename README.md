@@ -48,6 +48,17 @@ from the original papers.
 The exact formal command order, qrels firewall, robustness stores, ablations, and
 clean rebuild are specified in `plan/formal-runbook.md`.
 
+After the compatibility gate, the complete resumable execution is:
+
+```bash
+make formal-preheldout
+make formal-evaluate
+```
+
+The first command stops after hashing and locking every pre-evaluation artifact. The
+second verifies that lock before extracting held-out judgments and building all result
+tables, figures, and the Chinese report.
+
 ## Research boundary
 
 The primary outcomes are retrieval quality and logical per-channel access depth.
