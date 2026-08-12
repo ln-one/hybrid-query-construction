@@ -10,7 +10,7 @@ dist/
 data/cache/
 data/raw/
 data/processed/
-artifacts/generations/*.jsonl*
+artifacts/generations/**
 artifacts/lock/*.json
 artifacts/rankings/*
 artifacts/traces/*
