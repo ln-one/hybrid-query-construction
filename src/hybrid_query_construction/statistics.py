@@ -54,6 +54,31 @@ def paired_sign_flip_pvalue(
     return (extreme + 1.0) / (resamples + 1.0)
 
 
+def stratified_sign_flip_pvalue(
+    differences: Mapping[str, Sequence[float]],
+    *,
+    resamples: int = 10_000,
+    seed: int = 20260813,
+) -> float:
+    if not differences or any(not values for values in differences.values()):
+        raise ValueError("each dataset needs at least one paired difference")
+    arrays = [np.asarray(values, dtype=np.float64) for values in differences.values()]
+    observed = abs(float(np.mean([array.mean() for array in arrays])))
+    random = np.random.default_rng(seed)
+    extreme = 0
+    for _ in range(resamples):
+        statistic = float(
+            np.mean(
+                [
+                    np.mean(array * random.choice((-1.0, 1.0), size=len(array)))
+                    for array in arrays
+                ]
+            )
+        )
+        extreme += abs(statistic) >= observed
+    return (extreme + 1.0) / (resamples + 1.0)
+
+
 def holm_adjust(pvalues: Mapping[str, float]) -> dict[str, float]:
     ordered = sorted(pvalues.items(), key=lambda item: item[1])
     adjusted: dict[str, float] = {}

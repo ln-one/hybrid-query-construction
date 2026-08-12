@@ -1,0 +1,2 @@
+Write a financial article passage that answers the search query. Return one JSON object
+and no other text: {"references":["..."]}

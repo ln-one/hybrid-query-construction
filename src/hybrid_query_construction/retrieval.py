@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from .io import atomic_write_text
 class DenseEncoder:
     def __init__(self, model_id: str, revision: str, device: str = "mps") -> None:
         self.model = SentenceTransformer(model_id, revision=revision, device=device)
+        self.model.max_seq_length = 512
 
     def encode_documents(
         self, texts: Sequence[str], batch_size: int = 128
@@ -79,7 +81,7 @@ def build_lucene_index(
     index_directory.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(
         [
-            "python",
+            sys.executable,
             "-m",
             "pyserini.index.lucene",
             "--collection",

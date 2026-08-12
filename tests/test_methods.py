@@ -1,7 +1,11 @@
 import numpy as np
 
 from hybrid_query_construction.fusion import rank_scores
-from hybrid_query_construction.methods import orthogonal_residual, sparse_score_product
+from hybrid_query_construction.methods import (
+    mugi_sparse_rewrite,
+    orthogonal_residual,
+    sparse_score_product,
+)
 
 
 def test_orthogonal_residual_preserves_original_coefficient() -> None:
@@ -33,3 +37,9 @@ def test_sparse_product_ranking_is_scale_invariant() -> None:
     assert rank_scores(sparse_score_product(original, rewrite)) == rank_scores(
         sparse_score_product(scaled, rewrite)
     )
+
+
+def test_mugi_repetition_matches_public_integer_rule() -> None:
+    query = "abcd"
+    references = ["x" * 32]
+    assert mugi_sparse_rewrite(query, references, beta=4).split().count(query) == 2

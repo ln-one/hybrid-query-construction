@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import zipfile
@@ -11,7 +12,7 @@ from urllib.parse import unquote, urlparse
 
 import requests
 
-from .io import atomic_write_bytes, read_jsonl, sha256_file, write_json
+from .io import atomic_write_bytes, atomic_write_text, read_jsonl, sha256_file, write_json
 
 
 def download_archive(url: str, destination: Path) -> Path:
@@ -120,3 +121,70 @@ def load_qrels(path: Path) -> dict[str, dict[str, int]]:
             score = int(row["score"])
             qrels.setdefault(query_id, {})[document_id] = score
     return qrels
+
+
+def prepare_nested_snapshots(
+    dataset_id: str,
+    root: Path,
+    sizes: list[int],
+) -> list[dict[str, Any]]:
+    """Create deterministic nested corpora while retaining every relevant document."""
+    source = root / "data" / "processed" / dataset_id
+    corpus_rows = list(read_jsonl(source / "corpus.jsonl"))
+    qrels = load_qrels(source / "qrels.tsv")
+    relevant = {
+        document_id
+        for judgments in qrels.values()
+        for document_id, grade in judgments.items()
+        if grade > 0
+    }
+    by_id = {str(row.get("_id", row.get("id"))): row for row in corpus_rows}
+    missing = relevant - by_id.keys()
+    if missing:
+        raise RuntimeError(f"relevant documents absent from corpus: {len(missing)}")
+    ordered_remainder = sorted(
+        by_id.keys() - relevant,
+        key=lambda document_id: (
+            hashlib.sha256(document_id.encode()).hexdigest(),
+            document_id,
+        ),
+    )
+    manifests: list[dict[str, Any]] = []
+    previous: set[str] = set()
+    for requested_size in sorted(set(sizes)):
+        if requested_size < len(relevant):
+            message = (
+                f"snapshot size {requested_size} cannot retain "
+                f"{len(relevant)} relevant documents"
+            )
+            raise ValueError(message)
+        actual_size = min(requested_size, len(by_id))
+        selected = relevant | set(ordered_remainder[: actual_size - len(relevant)])
+        if previous and not previous <= selected:
+            raise AssertionError("snapshot selection is not nested")
+        previous = selected
+        destination = root / "data" / "processed" / f"{dataset_id}-{actual_size}"
+        rows = [by_id[document_id] for document_id in sorted(selected)]
+        atomic_write_text(
+            destination / "corpus.jsonl",
+            "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows),
+        )
+        atomic_write_bytes(
+            destination / "queries.jsonl", (source / "queries.jsonl").read_bytes()
+        )
+        atomic_write_bytes(destination / "qrels.tsv", (source / "qrels.tsv").read_bytes())
+        manifest = {
+            "schema_version": 1,
+            "source_dataset": dataset_id,
+            "dataset": f"{dataset_id}-{actual_size}",
+            "requested_size": requested_size,
+            "actual_size": actual_size,
+            "relevant_documents_retained": len(relevant),
+            "selection": "all_relevant_then_sha256_docid_ascending",
+            "corpus_sha256": sha256_file(destination / "corpus.jsonl"),
+            "queries_sha256": sha256_file(destination / "queries.jsonl"),
+            "qrels_sha256": sha256_file(destination / "qrels.tsv"),
+        }
+        write_json(destination / "manifest.json", manifest)
+        manifests.append(manifest)
+    return manifests

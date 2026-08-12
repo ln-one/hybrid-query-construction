@@ -6,10 +6,17 @@ from pathlib import Path
 
 import yaml
 
-from .datasets import load_queries, prepare_beir_dataset, unseal_qrels
+from .datasets import (
+    load_queries,
+    prepare_beir_dataset,
+    prepare_nested_snapshots,
+    unseal_qrels,
+)
+from .evaluate import evaluate_rankings
 from .generation import run_generation
 from .locking import create_preheldout_lock
 from .reporting import build_report
+from .runner import build_rankings
 from .tiny import run_tiny
 from .verification import verify_repository
 
@@ -42,7 +49,12 @@ def command_generate(args: argparse.Namespace) -> None:
     config = yaml.safe_load((root / args.config).read_text(encoding="utf-8"))
     model = config[args.model]
     queries = load_queries(root / "data" / "processed" / args.dataset / "queries.jsonl")
-    if args.limit:
+    if args.hash_limit:
+        from .io import hash_selected
+
+        selected = hash_selected(queries, args.hash_limit)
+        queries = {key: queries[key] for key in selected}
+    elif args.limit:
         queries = {key: queries[key] for key in sorted(queries)[: args.limit]}
     prompt_path = root / args.prompt
     run_generation(
@@ -54,7 +66,50 @@ def command_generate(args: argparse.Namespace) -> None:
         model_config=model,
         protocol_version="hqc-formal-v1",
         prompt_name=prompt_path.stem,
+        reference_count=args.reference_count,
+        draws=args.draws,
     )
+
+
+def command_rank(args: argparse.Namespace) -> None:
+    root = repository_root()
+    config = yaml.safe_load((root / args.config).read_text(encoding="utf-8"))
+
+    def optional_path(value: str | None) -> Path | None:
+        return root / value if value else None
+
+    print(
+        build_rankings(
+            root=root,
+            dataset=args.dataset,
+            retriever_config=config,
+            bridge_generation=optional_path(args.bridge_generation),
+            mugi_generation=optional_path(args.mugi_generation),
+            hyde_generation=optional_path(args.hyde_generation),
+            query2doc_generation=optional_path(args.query2doc_generation),
+            query_limit=args.limit,
+            reference_counts=tuple(args.reference_counts),
+        )
+    )
+
+
+def command_evaluate(args: argparse.Namespace) -> None:
+    root = repository_root()
+    results = evaluate_rankings(
+        root=root,
+        dataset=args.dataset,
+        store_path=root / args.store,
+        output_directory=root / args.output,
+        reference_count=args.reference_count,
+        constant=args.rrf_constant,
+    )
+    print("\n".join(str(path) for path in results))
+
+
+def command_snapshots(args: argparse.Namespace) -> None:
+    root = repository_root()
+    for manifest in prepare_nested_snapshots(args.dataset, root, args.sizes):
+        print(json.dumps(manifest, ensure_ascii=False))
 
 
 def command_lock(args: argparse.Namespace) -> None:
@@ -94,7 +149,34 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--prompt", default="prompts/primary-reference-v1.txt")
     generate.add_argument("--output", required=True)
     generate.add_argument("--limit", type=int)
+    generate.add_argument("--hash-limit", type=int)
+    generate.add_argument("--reference-count", type=int)
+    generate.add_argument("--draws", type=int)
     generate.set_defaults(function=command_generate)
+
+    rank = subparsers.add_parser("rank")
+    rank.add_argument("--config", default="configs/retrievers/formal-v1.yaml")
+    rank.add_argument("--dataset", required=True)
+    rank.add_argument("--bridge-generation")
+    rank.add_argument("--mugi-generation")
+    rank.add_argument("--hyde-generation")
+    rank.add_argument("--query2doc-generation")
+    rank.add_argument("--reference-counts", type=int, nargs="+", default=(1, 3, 5))
+    rank.add_argument("--limit", type=int)
+    rank.set_defaults(function=command_rank)
+
+    evaluate = subparsers.add_parser("evaluate")
+    evaluate.add_argument("--dataset", required=True)
+    evaluate.add_argument("--store", required=True)
+    evaluate.add_argument("--output", default="artifacts/results/raw")
+    evaluate.add_argument("--reference-count", type=int, default=5)
+    evaluate.add_argument("--rrf-constant", type=int, default=60)
+    evaluate.set_defaults(function=command_evaluate)
+
+    snapshots = subparsers.add_parser("snapshots")
+    snapshots.add_argument("--dataset", default="trec-covid")
+    snapshots.add_argument("--sizes", type=int, nargs="+", required=True)
+    snapshots.set_defaults(function=command_snapshots)
 
     lock = subparsers.add_parser("lock")
     lock.add_argument("--output", default="artifacts/lock/pre-heldout-v1.json")

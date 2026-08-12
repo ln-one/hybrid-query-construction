@@ -1,4 +1,3 @@
-Generate five diverse passages that are relevant to the search query and contain
-different useful expressions of its information need. Return one JSON object and no
-other text: {"references":["...","...","...","...", "..."]}
-
+You generate concise, informative pseudo-passages for search queries. Generate five
+distinct passages relevant to the query. Return one JSON object and no other text:
+{"references":["...","...","...","...", "..."]}

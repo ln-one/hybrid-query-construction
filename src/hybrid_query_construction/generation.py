@@ -98,6 +98,8 @@ def run_generation(
     model_config: dict[str, Any],
     protocol_version: str,
     prompt_name: str,
+    reference_count: int | None = None,
+    draws: int | None = None,
 ) -> None:
     existing = (
         {(row["query_id"], int(row["draw_id"])) for row in read_jsonl(output_path)}
@@ -115,9 +117,10 @@ def run_generation(
     )
     runtime_hash = sha256_file(root / "uv.lock")
     commit = current_commit(root)
-    expected_count = int(model_config["reference_count"])
+    expected_count = int(reference_count or model_config["reference_count"])
+    draw_count = int(draws or model_config["draws"])
     for query_id in sorted(queries):
-        for draw_id in range(int(model_config["draws"])):
+        for draw_id in range(draw_count):
             if (query_id, draw_id) in existing:
                 continue
             seed = stable_seed(protocol_version, dataset, query_id, str(draw_id), prompt_hash)

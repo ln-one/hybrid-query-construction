@@ -24,8 +24,25 @@ make verify
 Formal generation, indexing, retrieval, and evaluation are separate commands so
 that held-out qrels are unavailable until the pre-evaluation lock is written.
 
+## Formal command boundary
+
+Each command is resumable at query or ranking-artifact granularity:
+
+```bash
+hqc prepare --dataset scifact
+hqc generate --dataset scifact --output artifacts/generations/bridge/scifact.jsonl
+hqc rank --dataset scifact \
+  --bridge-generation artifacts/generations/bridge/scifact.jsonl
+hqc evaluate --dataset scifact \
+  --store artifacts/rankings/scifact/rankings.sqlite3
+```
+
+Baseline prompts are generated into separate files and supplied to `hqc rank` with
+`--mugi-generation`, `--hyde-generation`, and `--query2doc-generation`. The
+reproduction cards in `plan/reproduction-cards/` state every deliberate departure
+from the original papers.
+
 ## Research boundary
 
 The primary outcomes are retrieval quality and logical per-channel access depth.
 No wall-clock latency or end-to-end speedup claim is made by this repository.
-

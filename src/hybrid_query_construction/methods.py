@@ -66,7 +66,7 @@ def mugi_sparse_rewrite(query: str, references: Sequence[str], beta: int = 4) ->
     if beta <= 0:
         raise ValueError("beta must be positive")
     reference_length = sum(len(reference) for reference in references)
-    repetitions = max(1, reference_length // max(1, len(query) * beta))
+    repetitions = reference_length // max(1, len(query)) // beta
     return " ".join([*([query.strip()] * repetitions), *references]).strip()
 
 
