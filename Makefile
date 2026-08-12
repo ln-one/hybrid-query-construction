@@ -1,4 +1,4 @@
-.PHONY: setup tiny test lint verify tables
+.PHONY: setup tiny test lint verify tables clean-rebuild generate-qwen generate-robustness
 
 setup:
 	uv sync --extra dev
@@ -15,6 +15,14 @@ lint:
 tables:
 	uv run hqc report --input artifacts/results/raw --output report
 
+clean-rebuild:
+	./scripts/clean_rebuild.sh
+
+generate-qwen:
+	./scripts/run_qwen_generation.sh
+
+generate-robustness:
+	./scripts/run_robustness_generation.sh
+
 verify: test lint
 	uv run hqc verify --root .
-

@@ -145,6 +145,7 @@ Development datasets use the same commands but stay separate from held-out table
 ```bash
 uv run hqc report --input artifacts/results/raw --output report
 make verify
+make clean-rebuild
 ```
 
 The clean-room check creates a fresh environment from `uv.lock`, copies only locked
