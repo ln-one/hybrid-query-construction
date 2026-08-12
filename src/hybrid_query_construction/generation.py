@@ -103,7 +103,11 @@ class LocalGenerator:
         )
         completion = output[0, inputs["input_ids"].shape[1] :]
         raw = self.tokenizer.decode(completion, skip_special_tokens=True)
-        finish = "eos" if int(completion[-1]) == self.tokenizer.eos_token_id else "length"
+        finish = (
+            "eos"
+            if completion.numel() and int(completion[-1]) == self.tokenizer.eos_token_id
+            else "length"
+        )
         return raw, int(inputs["input_ids"].shape[1]), int(completion.shape[0]), finish
 
 

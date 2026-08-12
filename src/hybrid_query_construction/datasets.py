@@ -92,9 +92,15 @@ def unseal_qrels(dataset_id: str, root: Path, lock_path: Path) -> Path:
     destination = root / "data" / "processed" / dataset_id / "qrels.tsv"
     with zipfile.ZipFile(archive_path) as archive:
         atomic_write_bytes(destination, archive.read(manifest["qrels_member"]))
-    manifest["qrels_state"] = "unsealed_after_lock"
-    manifest["qrels_sha256"] = sha256_file(destination)
-    write_json(manifest_path, manifest)
+    write_json(
+        root / "artifacts" / "lock" / f"unsealed-{dataset_id}.json",
+        {
+            "schema_version": 1,
+            "dataset": dataset_id,
+            "qrels_sha256": sha256_file(destination),
+            "preheldout_lock_sha256": sha256_file(lock_path),
+        },
+    )
     return destination
 
 

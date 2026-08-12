@@ -67,6 +67,14 @@ def _put_ranking(
     fallback: bool,
     generation_sha256: str,
 ) -> None:
+    if store.has(
+        query_id=query_id,
+        draw_id=draw_id,
+        track=track,
+        channel=channel,
+        reference_count=reference_count,
+    ):
+        return
     ranking, _ = dense_ranking(document_ids, document_embeddings, query_vector)
     store.put(
         query_id=query_id,
@@ -93,6 +101,14 @@ def _put_sparse(
     fallback: bool,
     generation_sha256: str,
 ) -> None:
+    if store.has(
+        query_id=query_id,
+        draw_id=draw_id,
+        track=track,
+        channel=channel,
+        reference_count=reference_count,
+    ):
+        return
     ranking = rank_scores(scores)
     store.put(
         query_id=query_id,
@@ -158,6 +174,46 @@ def build_rankings(
     store_name = "rankings.sqlite3" if run_id == "primary" else f"rankings-{run_id}.sqlite3"
     store_path = cache / store_name
     instruction = dense_config.get("query_instruction", "")
+
+    generation_paths = {
+        "bridge": bridge_generation,
+        "mugi": mugi_generation,
+        "hyde": hyde_generation,
+        "query2doc": query2doc_generation,
+    }
+    run_spec = {
+        "schema_version": 1,
+        "protocol_version": "hqc-formal-v1",
+        "dataset": dataset,
+        "run_id": run_id,
+        "dense_key": dense_key,
+        "query_limit": query_limit,
+        "reference_counts": list(reference_counts),
+        "code_commit": current_commit(root),
+        "retriever_config_sha256": sha256_bytes(canonical_json(retriever_config).encode()),
+        "corpus_sha256": sha256_file(corpus_path),
+        "queries_sha256": sha256_file(data_directory / "queries.jsonl"),
+        "document_ids_sha256": sha256_file(ids_path),
+        "document_embeddings_sha256": sha256_file(embeddings_path),
+        "generation_inputs": {
+            name: sha256_file(path) if path is not None and path.exists() else None
+            for name, path in generation_paths.items()
+        },
+    }
+    spec_name = "rankings-spec.json" if run_id == "primary" else f"rankings-{run_id}-spec.json"
+    spec_path = cache / spec_name
+    if spec_path.exists():
+        existing_spec = json.loads(spec_path.read_text(encoding="utf-8"))
+        if existing_spec != run_spec:
+            raise RuntimeError(
+                f"ranking run specification changed; choose a new --run-id: {spec_path}"
+            )
+    elif store_path.exists():
+        raise RuntimeError(
+            f"ranking store has no immutable run specification; move it aside: {store_path}"
+        )
+    else:
+        write_json(spec_path, run_spec)
 
     original_vectors = encoder.encode_queries(list(queries.values()), instruction)
     with RankingStore(store_path, dataset, document_ids) as store:
@@ -340,31 +396,9 @@ def build_rankings(
                         fallback=fallback,
                         generation_sha256=digest,
                     )
-    generation_paths = {
-        "bridge": bridge_generation,
-        "mugi": mugi_generation,
-        "hyde": hyde_generation,
-        "query2doc": query2doc_generation,
-    }
     manifest = {
-        "schema_version": 1,
-        "protocol_version": "hqc-formal-v1",
-        "dataset": dataset,
-        "run_id": run_id,
-        "dense_key": dense_key,
-        "query_limit": query_limit,
-        "reference_counts": list(reference_counts),
-        "code_commit": current_commit(root),
-        "retriever_config_sha256": sha256_bytes(canonical_json(retriever_config).encode()),
-        "corpus_sha256": sha256_file(corpus_path),
-        "queries_sha256": sha256_file(data_directory / "queries.jsonl"),
-        "document_ids_sha256": sha256_file(ids_path),
-        "document_embeddings_sha256": sha256_file(embeddings_path),
+        **run_spec,
         "ranking_store_sha256": sha256_file(store_path),
-        "generation_inputs": {
-            name: sha256_file(path) if path is not None and path.exists() else None
-            for name, path in generation_paths.items()
-        },
     }
     manifest_name = (
         "rankings-manifest.json" if run_id == "primary" else f"rankings-{run_id}-manifest.json"

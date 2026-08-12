@@ -12,6 +12,8 @@ from .statistics import holm_adjust, stratified_macro_bootstrap, stratified_sign
 
 PRIMARY_METRICS = ("ndcg_at_10", "recall_at_20", "dense_depth", "sparse_depth")
 COMPARATORS = ("original", "bridge_shared")
+DEVELOPMENT_DATASETS = ("scifact", "nfcorpus", "trec-covid")
+HELDOUT_DATASETS = ("fiqa", "arguana", "webis-touche2020", "scidocs")
 
 
 def load_result_rows(input_directory: Path) -> list[dict[str, Any]]:
@@ -19,6 +21,38 @@ def load_result_rows(input_directory: Path) -> list[dict[str, Any]]:
     for path in sorted(input_directory.rglob("*.jsonl")):
         if "fixed-top-l" not in path.name:
             rows.extend(read_jsonl(path))
+    return rows
+
+
+def load_fixed_top_l_rows(input_directory: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for path in sorted(input_directory.rglob("*-fixed-top-l.jsonl")):
+        rows.extend(read_jsonl(path))
+    return rows
+
+
+def load_generation_rows(root: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for path in sorted((root / "artifacts" / "generations").rglob("*.jsonl")):
+        if "compat" in path.parts:
+            continue
+        for record in read_jsonl(path):
+            attempts = record.get("attempts", [])
+            rows.append(
+                {
+                    "dataset": record["dataset"],
+                    "model_id": record["model_id"],
+                    "prompt_path": record["prompt_path"],
+                    "query_id": record["query_id"],
+                    "draw_id": record["draw_id"],
+                    "prompt_tokens": sum(int(item["prompt_tokens"]) for item in attempts),
+                    "completion_tokens": sum(
+                        int(item["completion_tokens"]) for item in attempts
+                    ),
+                    "attempts": len(attempts),
+                    "failed": record["status"] != "ok",
+                }
+            )
     return rows
 
 
@@ -183,7 +217,9 @@ def _plot_quality_access(summary: pd.DataFrame, output: Path) -> None:
     plt.close(fig)
 
 
-def build_report(input_directory: Path, output_directory: Path) -> Path:
+def build_report(
+    input_directory: Path, output_directory: Path, root: Path | None = None
+) -> Path:
     rows = load_result_rows(input_directory)
     if not rows:
         raise RuntimeError("no real per-query result records found")
@@ -191,20 +227,83 @@ def build_report(input_directory: Path, output_directory: Path) -> Path:
     frame = pd.DataFrame(rows)
     query_means = _query_means(frame)
     summary = _summary(query_means)
-    access = _access_changes(query_means)
-    tests = _paired_tests(query_means)
+    heldout_query_means = query_means[query_means["dataset"].isin(HELDOUT_DATASETS)]
+    access = _access_changes(heldout_query_means)
+    tests = _paired_tests(heldout_query_means)
 
     query_means.to_csv(output_directory / "per-query-draw-mean.csv", index=False)
-    summary.to_csv(output_directory / "main-results.csv", index=False)
-    access.to_csv(output_directory / "access-changes-vs-original.csv", index=False)
-    tests.to_csv(output_directory / "primary-paired-tests.csv", index=False)
-    _plot_quality_access(summary, output_directory / "quality-access.png")
-
-    controlled = summary[
-        (summary["track"] == "controlled")
+    summary.to_csv(output_directory / "all-results.csv", index=False)
+    heldout_main = summary[
+        summary["dataset"].isin(HELDOUT_DATASETS)
+        & (summary["track"] == "controlled")
         & (summary["reference_count"] == 5)
         & (summary["rrf_constant"] == 60)
     ]
+    heldout_main.to_csv(output_directory / "main-results.csv", index=False)
+    summary[
+        summary["dataset"].isin(HELDOUT_DATASETS) & (summary["track"] == "fidelity")
+    ].to_csv(output_directory / "fidelity-results.csv", index=False)
+    summary[summary["dataset"].isin(DEVELOPMENT_DATASETS)].to_csv(
+        output_directory / "development-results.csv", index=False
+    )
+    summary[summary["track"] == "ablation"].to_csv(
+        output_directory / "ablation-results.csv", index=False
+    )
+    summary[summary["track"] == "robustness"].to_csv(
+        output_directory / "robustness-results.csv", index=False
+    )
+    summary[summary["track"] == "scale"].to_csv(
+        output_directory / "scale-results.csv", index=False
+    )
+    access.to_csv(output_directory / "access-changes-vs-original.csv", index=False)
+    tests.to_csv(output_directory / "primary-paired-tests.csv", index=False)
+    _plot_quality_access(heldout_main, output_directory / "quality-access.png")
+
+    fixed_rows = load_fixed_top_l_rows(input_directory)
+    if fixed_rows:
+        fixed_frame = pd.DataFrame(fixed_rows)
+        fixed_summary = (
+            fixed_frame.groupby(
+                [
+                    "dataset",
+                    "track",
+                    "method",
+                    "reference_count",
+                    "rrf_constant",
+                    "top_l",
+                ],
+                as_index=False,
+            )
+            .agg(
+                ndcg_at_10=("ndcg_at_10", "mean"),
+                recall_at_20=("recall_at_20", "mean"),
+                complete_top20_exact_rate=("complete_top20_exact", "mean"),
+            )
+            .sort_values(
+                ["dataset", "track", "method", "reference_count", "rrf_constant", "top_l"]
+            )
+        )
+        fixed_summary.to_csv(output_directory / "fixed-top-l-results.csv", index=False)
+
+    generation_summary = pd.DataFrame()
+    if root is not None:
+        generation_rows = load_generation_rows(root)
+        if generation_rows:
+            generation_summary = (
+                pd.DataFrame(generation_rows)
+                .groupby(["dataset", "model_id", "prompt_path"], as_index=False)
+                .agg(
+                    records=("query_id", "size"),
+                    mean_prompt_tokens=("prompt_tokens", "mean"),
+                    mean_completion_tokens=("completion_tokens", "mean"),
+                    mean_attempts=("attempts", "mean"),
+                    failure_rate=("failed", "mean"),
+                )
+                .sort_values(["dataset", "model_id", "prompt_path"])
+            )
+            generation_summary.to_csv(output_directory / "generation-costs.csv", index=False)
+
+    controlled = heldout_main
     macro = (
         controlled.groupby("method", as_index=False)[list(PRIMARY_METRICS)]
         .mean()
@@ -235,6 +334,14 @@ def build_report(input_directory: Path, output_directory: Path) -> Path:
         "## 预注册主比较",
         "",
         tests.to_markdown(index=False, floatfmt=".6f"),
+        "",
+        "## 生成成本",
+        "",
+        (
+            generation_summary.to_markdown(index=False, floatfmt=".3f")
+            if not generation_summary.empty
+            else "尚无可汇总的生成记录。"
+        ),
         "",
         "## 结论边界",
         "",

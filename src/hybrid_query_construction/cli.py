@@ -136,7 +136,8 @@ def command_unseal(args: argparse.Namespace) -> None:
 
 
 def command_report(args: argparse.Namespace) -> None:
-    print(build_report(Path(args.input), Path(args.output)))
+    root = repository_root()
+    print(build_report(root / args.input, root / args.output, root=root))
 
 
 def command_verify(args: argparse.Namespace) -> None:

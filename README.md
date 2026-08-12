@@ -42,6 +42,9 @@ Baseline prompts are generated into separate files and supplied to `hqc rank` wi
 reproduction cards in `plan/reproduction-cards/` state every deliberate departure
 from the original papers.
 
+The exact formal command order, qrels firewall, robustness stores, ablations, and
+clean rebuild are specified in `plan/formal-runbook.md`.
+
 ## Research boundary
 
 The primary outcomes are retrieval quality and logical per-channel access depth.
