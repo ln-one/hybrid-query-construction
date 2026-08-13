@@ -24,9 +24,11 @@ done
 
 for dataset in fiqa arguana webis-touche2020 scidocs; do
   uv run hqc evaluate --dataset "$dataset" --result-track robustness \
+    --condition-id mistral \
     --skip-fidelity --skip-fixed-top-l --output-id "${dataset}-mistral" \
     --store "artifacts/rankings/$dataset/rankings-mistral.sqlite3"
   uv run hqc evaluate --dataset "$dataset" --result-track robustness \
+    --condition-id contriever \
     --skip-fidelity --skip-fixed-top-l --output-id "${dataset}-contriever" \
     --store "artifacts/rankings/$dataset/rankings-contriever.sqlite3"
 done

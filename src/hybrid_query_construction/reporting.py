@@ -68,6 +68,7 @@ def _query_means(frame: pd.DataFrame) -> pd.DataFrame:
                 "dataset",
                 "query_id",
                 "track",
+                "condition_id",
                 "method",
                 "reference_count",
                 "rrf_constant",
@@ -84,7 +85,15 @@ def _query_means(frame: pd.DataFrame) -> pd.DataFrame:
             fallback=("fallback", "mean"),
         )
         .sort_values(
-            ["dataset", "track", "reference_count", "rrf_constant", "method", "query_id"]
+            [
+                "dataset",
+                "track",
+                "condition_id",
+                "reference_count",
+                "rrf_constant",
+                "method",
+                "query_id",
+            ]
         )
     )
 
@@ -92,7 +101,14 @@ def _query_means(frame: pd.DataFrame) -> pd.DataFrame:
 def _summary(query_means: pd.DataFrame) -> pd.DataFrame:
     return (
         query_means.groupby(
-            ["dataset", "track", "method", "reference_count", "rrf_constant"],
+            [
+                "dataset",
+                "track",
+                "condition_id",
+                "method",
+                "reference_count",
+                "rrf_constant",
+            ],
             as_index=False,
         )
         .agg(
@@ -105,13 +121,23 @@ def _summary(query_means: pd.DataFrame) -> pd.DataFrame:
             sparse_exhaustion_rate=("sparse_exhausted", "mean"),
             fallback_rate=("fallback", "mean"),
         )
-        .sort_values(["dataset", "track", "reference_count", "rrf_constant", "method"])
+        .sort_values(
+            [
+                "dataset",
+                "track",
+                "condition_id",
+                "reference_count",
+                "rrf_constant",
+                "method",
+            ]
+        )
     )
 
 
 def _access_changes(query_means: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     controlled = query_means[
         (query_means["track"] == "controlled")
+        & (query_means["condition_id"] == "primary")
         & (query_means["reference_count"] == 5)
         & (query_means["rrf_constant"] == 60)
     ]
@@ -185,12 +211,12 @@ def _access_changes(query_means: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFra
 def _paired_tests(query_means: pd.DataFrame) -> pd.DataFrame:
     controlled = query_means[
         (query_means["track"] == "controlled")
+        & (query_means["condition_id"] == "primary")
         & (query_means["reference_count"] == 5)
         & (query_means["rrf_constant"] == 60)
     ]
     proposed = controlled[controlled["method"] == "proposed"]
     rows: list[dict[str, object]] = []
-    pvalues: dict[str, float] = {}
     for comparator in COMPARATORS:
         baseline = controlled[controlled["method"] == comparator]
         paired = proposed.merge(
@@ -199,6 +225,8 @@ def _paired_tests(query_means: pd.DataFrame) -> pd.DataFrame:
             suffixes=("_proposed", "_comparator"),
             validate="one_to_one",
         )
+        comparator_rows: list[dict[str, object]] = []
+        comparator_pvalues: dict[str, float] = {}
         for metric in PRIMARY_METRICS:
             favorable = (
                 paired[f"{metric}_proposed"] - paired[f"{metric}_comparator"]
@@ -210,10 +238,9 @@ def _paired_tests(query_means: pd.DataFrame) -> pd.DataFrame:
                 for dataset, group in favorable.groupby(paired["dataset"])
             }
             estimate, lower, upper = stratified_macro_bootstrap(differences)
-            name = f"{comparator}:{metric}"
             pvalue = stratified_sign_flip_pvalue(differences)
-            pvalues[name] = pvalue
-            rows.append(
+            comparator_pvalues[metric] = pvalue
+            comparator_rows.append(
                 {
                     "comparison": f"proposed_vs_{comparator}",
                     "metric": metric,
@@ -223,10 +250,37 @@ def _paired_tests(query_means: pd.DataFrame) -> pd.DataFrame:
                     "p_raw": pvalue,
                 }
             )
-    adjusted = holm_adjust(pvalues)
-    for row in rows:
-        key = f"{str(row['comparison']).removeprefix('proposed_vs_')}:{row['metric']}"
-        row["p_holm"] = adjusted[key]
+        adjusted = holm_adjust(comparator_pvalues)
+        for row in comparator_rows:
+            row["p_holm"] = adjusted[str(row["metric"])]
+        rows.extend(comparator_rows)
+    return pd.DataFrame(rows)
+
+
+def _method_macro_intervals(query_means: pd.DataFrame) -> pd.DataFrame:
+    controlled = query_means[
+        (query_means["track"] == "controlled")
+        & (query_means["condition_id"] == "primary")
+        & (query_means["reference_count"] == 5)
+        & (query_means["rrf_constant"] == 60)
+    ]
+    rows: list[dict[str, object]] = []
+    for method, method_data in controlled.groupby("method", sort=True):
+        for metric in PRIMARY_METRICS:
+            values = {
+                str(dataset): group[metric].to_list()
+                for dataset, group in method_data.groupby("dataset")
+            }
+            estimate, lower, upper = stratified_macro_bootstrap(values)
+            rows.append(
+                {
+                    "method": method,
+                    "metric": metric,
+                    "estimate": estimate,
+                    "ci95_lower": lower,
+                    "ci95_upper": upper,
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -252,26 +306,30 @@ def _classify_confirmatory_outcomes(tests: pd.DataFrame) -> pd.DataFrame:
 def _plot_quality_access(summary: pd.DataFrame, output: Path) -> None:
     controlled = summary[
         (summary["track"] == "controlled")
+        & (summary["condition_id"] == "primary")
         & (summary["reference_count"] == 5)
         & (summary["rrf_constant"] == 60)
     ]
     macro = controlled.groupby("method", as_index=False)[
         ["ndcg_at_10", "dense_depth", "sparse_depth"]
     ].mean()
-    fig, axis = plt.subplots(figsize=(7.2, 4.8))
-    access = macro["dense_depth"] + macro["sparse_depth"]
-    axis.scatter(access, macro["ndcg_at_10"], color="#0072B2", s=45)
-    for _, row in macro.iterrows():
-        axis.annotate(
-            row["method"],
-            (row["dense_depth"] + row["sparse_depth"], row["ndcg_at_10"]),
-            xytext=(4, 4),
-            textcoords="offset points",
-            fontsize=8,
-        )
-    axis.set_xlabel("Mean logical access (Dense + Sparse)")
-    axis.set_ylabel("Dataset-macro nDCG@10")
-    axis.grid(alpha=0.2)
+    fig, axes = plt.subplots(1, 2, figsize=(10.2, 4.4), sharey=True)
+    for axis, depth, label in (
+        (axes[0], "dense_depth", "Mean Dense stopping depth"),
+        (axes[1], "sparse_depth", "Mean Sparse stopping depth"),
+    ):
+        axis.scatter(macro[depth], macro["ndcg_at_10"], color="#0072B2", s=45)
+        for _, row in macro.iterrows():
+            axis.annotate(
+                row["method"],
+                (row[depth], row["ndcg_at_10"]),
+                xytext=(4, 4),
+                textcoords="offset points",
+                fontsize=8,
+            )
+        axis.set_xlabel(label)
+        axis.grid(alpha=0.2)
+    axes[0].set_ylabel("Dataset-macro nDCG@10")
     fig.tight_layout()
     fig.savefig(output, dpi=220)
     plt.close(fig)
@@ -280,6 +338,7 @@ def _plot_quality_access(summary: pd.DataFrame, output: Path) -> None:
 def _plot_fixed_top_l(summary: pd.DataFrame, output: Path) -> None:
     selected = summary[
         summary["dataset"].isin(HELDOUT_DATASETS)
+        & (summary["condition_id"] == "primary")
         & summary["method"].isin(("original", "bridge_shared", "proposed"))
         & (summary["reference_count"] == 5)
         & (summary["rrf_constant"] == 60)
@@ -292,9 +351,7 @@ def _plot_fixed_top_l(summary: pd.DataFrame, output: Path) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(10.2, 4.2))
     for method, data in macro.groupby("method"):
         axes[0].plot(data["top_l"], data["ndcg_at_10"], marker="o", label=method)
-        axes[1].plot(
-            data["top_l"], data["complete_top20_exact_rate"], marker="o", label=method
-        )
+        axes[1].plot(data["top_l"], data["complete_top20_exact_rate"], marker="o", label=method)
     for axis in axes:
         axis.set_xscale("log")
         axis.set_xlabel("Fixed Top-L")
@@ -310,6 +367,7 @@ def _plot_fixed_top_l(summary: pd.DataFrame, output: Path) -> None:
 def _plot_scale_trends(summary: pd.DataFrame, output: Path) -> None:
     selected = summary[
         (summary["track"] == "scale")
+        & (summary["condition_id"] == "primary")
         & summary["method"].isin(("original", "proposed"))
         & (summary["reference_count"] == 5)
         & (summary["rrf_constant"] == 60)
@@ -341,11 +399,14 @@ def build_report(
         raise RuntimeError("no real per-query result records found")
     output_directory.mkdir(parents=True, exist_ok=True)
     frame = pd.DataFrame(rows)
+    if "condition_id" not in frame:
+        frame["condition_id"] = "primary"
     query_means = _query_means(frame)
     summary = _summary(query_means)
     heldout_query_means = query_means[query_means["dataset"].isin(HELDOUT_DATASETS)]
     access, access_intervals = _access_changes(heldout_query_means)
     tests = _paired_tests(heldout_query_means)
+    method_intervals = _method_macro_intervals(heldout_query_means)
     classifications = _classify_confirmatory_outcomes(tests)
 
     query_means.to_csv(output_directory / "per-query-draw-mean.csv", index=False)
@@ -353,6 +414,7 @@ def build_report(
     heldout_main = summary[
         summary["dataset"].isin(HELDOUT_DATASETS)
         & (summary["track"] == "controlled")
+        & (summary["condition_id"] == "primary")
         & (summary["reference_count"] == 5)
         & (summary["rrf_constant"] == 60)
     ]
@@ -367,12 +429,10 @@ def build_report(
         output_directory / "ablation-results.csv", index=False
     )
     summary[
-        summary["track"].isin(("controlled", "ablation"))
-        & (summary["rrf_constant"] == 60)
+        summary["track"].isin(("controlled", "ablation")) & (summary["rrf_constant"] == 60)
     ].to_csv(output_directory / "reference-count-results.csv", index=False)
     summary[
-        summary["track"].isin(("controlled", "ablation"))
-        & (summary["reference_count"] == 5)
+        summary["track"].isin(("controlled", "ablation")) & (summary["reference_count"] == 5)
     ].to_csv(output_directory / "rrf-constant-results.csv", index=False)
     summary[summary["track"] == "robustness"].to_csv(
         output_directory / "robustness-results.csv", index=False
@@ -383,6 +443,7 @@ def build_report(
     access.to_csv(output_directory / "access-changes-vs-original.csv", index=False)
     access_intervals.to_csv(output_directory / "access-macro-bootstrap.csv", index=False)
     tests.to_csv(output_directory / "primary-paired-tests.csv", index=False)
+    method_intervals.to_csv(output_directory / "main-macro-bootstrap.csv", index=False)
     classifications.to_csv(output_directory / "outcome-classification.csv", index=False)
     _plot_quality_access(heldout_main, output_directory / "quality-access.png")
 
@@ -394,6 +455,7 @@ def build_report(
                 [
                     "dataset",
                     "track",
+                    "condition_id",
                     "method",
                     "reference_count",
                     "rrf_constant",
@@ -407,7 +469,15 @@ def build_report(
                 complete_top20_exact_rate=("complete_top20_exact", "mean"),
             )
             .sort_values(
-                ["dataset", "track", "method", "reference_count", "rrf_constant", "top_l"]
+                [
+                    "dataset",
+                    "track",
+                    "condition_id",
+                    "method",
+                    "reference_count",
+                    "rrf_constant",
+                    "top_l",
+                ]
             )
         )
         fixed_summary.to_csv(output_directory / "fixed-top-l-results.csv", index=False)
@@ -456,6 +526,10 @@ def build_report(
         "## Controlled 主结果（数据集等权）",
         "",
         macro.to_markdown(index=False, floatfmt=".4f"),
+        "",
+        "### 主结果的查询级分层 bootstrap 95% 区间",
+        "",
+        method_intervals.to_markdown(index=False, floatfmt=".4f"),
         "",
         "## 相对 Original 的访问变化",
         "",

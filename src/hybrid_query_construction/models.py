@@ -89,6 +89,7 @@ class QueryResult(StrictModel):
     query_id: str
     draw_id: int
     track: Literal["controlled", "fidelity", "ablation", "robustness", "scale", "tiny"]
+    condition_id: str = "primary"
     method: str
     reference_count: int = Field(ge=0)
     rrf_constant: int = Field(gt=0)
