@@ -8,5 +8,5 @@ need or invent a specific answer. Each passage must be one sentence of at most 2
 
 Return one single-line JSON array containing exactly five distinct strings. Count the
 five array items before responding. Do not output an object key, query identifier,
-Markdown, or any other text. The final character must be `]`:
-["r1","r2","r3","r4","r5"]
+Markdown, placeholders, or any other text. Every item must contain a substantive
+passage. The final character must be `]`.

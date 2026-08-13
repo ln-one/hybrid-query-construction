@@ -36,19 +36,20 @@ def read(path: Path) -> list[dict[str, object]]:
 
 
 def main() -> None:
-    if len(sys.argv) != 5:
+    if len(sys.argv) < 4 or (len(sys.argv) - 1) % 3:
         raise SystemExit(
-            "usage: verify_generation_compatibility.py QWEN_A QWEN_B MISTRAL_A MISTRAL_B"
+            "usage: verify_generation_compatibility.py LABEL FIRST SECOND "
+            "[LABEL FIRST SECOND ...]"
         )
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     result: dict[str, object] = {
         "ok": True,
         "code_commit": commit,
     }
-    labels = ("qwen", "mistral")
-    for pair_index, label in enumerate(labels):
-        first_path = Path(sys.argv[1 + pair_index * 2])
-        second_path = Path(sys.argv[2 + pair_index * 2])
+    for argument_index in range(1, len(sys.argv), 3):
+        label = sys.argv[argument_index]
+        first_path = Path(sys.argv[argument_index + 1])
+        second_path = Path(sys.argv[argument_index + 2])
         first, second = read(first_path), read(second_path)
         if len(first) != 24 or len(second) != 24:
             raise RuntimeError(f"{label} artifacts must each contain 24 records")
@@ -58,11 +59,18 @@ def main() -> None:
             mismatches = [field for field in FIELDS if left[field] != right[field]]
             if mismatches:
                 raise RuntimeError(f"{label} record {index} differs in fields: {mismatches}")
+        failures = sum(row["status"] != "ok" for row in first)
+        retries = sum(int(row["retry_count"]) for row in first)
+        if failures or retries:
+            raise RuntimeError(
+                f"{label} compatibility requires zero failures and retries; "
+                f"observed failures={failures}, retries={retries}"
+            )
         result[label] = {
             "records_per_run": 24,
             "successful_per_run": sum(row["status"] == "ok" for row in first),
-            "failed_per_run": sum(row["status"] != "ok" for row in first),
-            "retried_per_run": sum(int(row["retry_count"]) for row in first),
+            "failed_per_run": failures,
+            "retried_per_run": retries,
             "model_artifact_sha256": first[0]["model_artifact_sha256"],
         }
     print(json.dumps(result, ensure_ascii=False, indent=2))

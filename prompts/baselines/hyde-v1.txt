@@ -1,4 +1,4 @@
 Write eight passages that answer the search query, each one sentence of at most 25
 words. Return one single-line JSON array containing exactly eight strings and no other
-text. The final character must be `]`:
-["...","...","...","...","...","...","...","..."]
+text. Every string must contain a distinct, substantive passage; do not emit
+placeholders. The final character must be `]`.

@@ -25,11 +25,12 @@ uv run hqc prepare-model --model robustness
 make compatibility
 ```
 
-Each compatibility artifact must contain 24 draw records and report its pinned model
-revision, unquantized BF16, the pinned MLX-LM and XGrammar backends, all generation
-attempts, and either five valid references or the registered failure for every draw. Independent
-runs of both Qwen and Mistral must reproduce query IDs, draw IDs, seeds, raw outputs,
-parsed references, statuses, and attempts exactly.
+Every formal prompt is gated by two independent 24-record runs. Every run must have
+zero failures and zero retries and must report its pinned model revision, unquantized
+BF16, the pinned MLX-LM and XGrammar backends, and all generation attempts. The two
+runs must reproduce query IDs, draw IDs, seeds, raw outputs, parsed references,
+statuses, and attempts exactly. The primary prompt is checked with both Qwen and
+Mistral; every baseline prompt is checked with Qwen.
 A model-load, conversion, BF16, or memory failure stops the formal run. Converted
 weight files have their own manifest and are included in the pre-held-out lock.
 
@@ -146,9 +147,11 @@ for dataset in fiqa arguana webis-touche2020 scidocs; do
       --store "artifacts/rankings/$dataset/rankings.sqlite3"
   done
   uv run hqc evaluate --dataset "$dataset" --result-track robustness \
+    --condition-id mistral \
     --skip-fidelity --skip-fixed-top-l --output-id "${dataset}-mistral" \
     --store "artifacts/rankings/$dataset/rankings-mistral.sqlite3"
   uv run hqc evaluate --dataset "$dataset" --result-track robustness \
+    --condition-id contriever \
     --skip-fidelity --skip-fixed-top-l --output-id "${dataset}-contriever" \
     --store "artifacts/rankings/$dataset/rankings-contriever.sqlite3"
 done
