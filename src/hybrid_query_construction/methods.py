@@ -16,7 +16,7 @@ def l2_normalize(vector: FloatArray) -> FloatArray:
 
 
 def contextual_mean(reference_vectors: Sequence[FloatArray]) -> FloatArray:
-    if not reference_vectors:
+    if len(reference_vectors) == 0:
         raise ValueError("at least one reference vector is required")
     return l2_normalize(np.mean(np.stack(reference_vectors), axis=0, dtype=np.float32))
 

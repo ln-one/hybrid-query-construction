@@ -2,10 +2,17 @@ import numpy as np
 
 from hybrid_query_construction.fusion import rank_scores
 from hybrid_query_construction.methods import (
+    contextual_mean,
     mugi_sparse_rewrite,
     orthogonal_residual,
     sparse_score_product,
 )
+
+
+def test_contextual_mean_accepts_encoder_array() -> None:
+    references = np.asarray([[1.0, 0.0], [0.0, 1.0]], dtype=np.float32)
+    expected = np.asarray([1.0, 1.0], dtype=np.float32) / np.sqrt(2.0)
+    np.testing.assert_allclose(contextual_mean(references), expected, atol=1e-6)
 
 
 def test_orthogonal_residual_preserves_original_coefficient() -> None:
