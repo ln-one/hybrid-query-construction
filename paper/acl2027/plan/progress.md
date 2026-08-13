@@ -2,7 +2,7 @@
 
 ## Current stage
 
-Method translation, paragraph-by-paragraph author review.
+Experiment setup translated and reviewed; formal results pending.
 
 ## Status
 
@@ -20,6 +20,11 @@ Method translation, paragraph-by-paragraph author review.
 - [x] Method Section 3.3.1 translated and reviewed.
 - [x] Method Section 3.3.2 translated and reviewed.
 - [x] Method Section 3.4 translated and reviewed.
+- [x] Experiments opening and Section 4.1 translated and reviewed.
+- [x] Experiments Section 4.2 translated and reviewed.
+- [x] Experiments Section 4.3 translated and reviewed.
+- [x] Experiments Section 4.4 translated and reviewed.
+- [x] Experiments Section 4.5 translated and reviewed.
 
 ## Capability-use audit
 
@@ -27,8 +32,8 @@ Method translation, paragraph-by-paragraph author review.
   academic translation, and LaTeX output.
 - Inputs: approved Chinese Introduction paragraph, evidence map, official ACL
   Anthology BibTeX records, and the official ACL style repository.
-- Artifact: ACL project skeleton, the reviewed English Introduction and Related
-  Work, and Method Sections 3.1--3.4.
+- Artifact: ACL project skeleton, the reviewed English Introduction, Related
+  Work, Method Sections 3.1--3.4, and Experiments Sections 4.1--4.5.
 - Verification: `make clean && make` produced `build/main.pdf`; all citations
   resolved and no overfull boxes were reported.
 - Remaining risk: empirical claims and the abstract remain pending formal results.
