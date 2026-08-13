@@ -1,0 +1,63 @@
+\section{Introduction}
+\label{sec:introduction}
+
+LLM-based query expansion has become a common approach to improving retrieval
+effectiveness \citep{gao-etal-2023-precise,wang-etal-2023-query2doc,zhang-etal-2024-exploring-best}.
+For hybrid retrieval, its gains are typically measured at a preset top-$L$
+cutoff using metrics such as nDCG and recall
+\citep{zhang-etal-2024-exploring-best,liu-zhang-2025-exp4fuse}.
+Recent work on fixed top-$L$ fusion shows that $L$ does more than control access
+depth: changing the cutoff can also change which candidates and cross-channel
+contributions enter the fused ranking \citep{zhang2026exact}.
+Consequently, a gain observed at one $L$ reflects both the query expansion and
+the chosen cutoff; at another $L$, its magnitude---and even the ordering between
+methods---may change. Evidence from a single cutoff therefore does not isolate
+the effect of query expansion.
+
+To remove this confound, we evaluate the retrieval effectiveness of each query
+construction using complete-list fusion, without truncating either channel
+\citep{zhang2026exact}. We then reveal the dense and sparse rankings
+progressively and record the per-channel depths at which the same ordered
+top-$K$ becomes fixed. This separates two questions: what fused ranking does an
+expansion produce, and how much ranked evidence is required to determine it?
+The answers need not move together. An expansion may improve retrieval
+effectiveness while pushing decisive evidence deeper into one channel. We
+therefore ask whether query expansion can improve effectiveness without
+increasing the access depth of either channel.
+
+Meeting both goals requires treating dense and sparse retrieval differently.
+Prior studies show that expansion gains vary across retrievers, and that dense
+and sparse retrieval can favor different forms of generated evidence
+\citep{weller-etal-2024-generative,li-etal-2026-dvcqr}. Our NFCorpus analysis
+shows what happens when one shared expansion is applied to both channels. When
+the same generated passages are used in both channels, retrieval effectiveness
+improves and fewer dense ranks are needed to determine the fused result, yet
+more sparse ranks are required. The unexpanded sparse query matches only a
+small portion of the corpus; the added terms make far more documents eligible
+for sparse ranking, so the list no longer exhausts early. The same generated
+content therefore supplies useful semantic evidence to the dense retriever
+while spreading lexical evidence across a much larger sparse list. A shared
+expansion cannot control these two effects separately.
+
+We address this asymmetry with channel-asymmetric query expansion. The LLM
+generates several complementary reference passages around the original query.
+For dense retrieval, orthogonal residual expansion preserves the original query
+direction and adds only the new semantic component supplied by the references.
+For sparse retrieval, score-product anchoring multiplies each document's scores
+under the unexpanded and expanded queries. Documents matched only by generated
+terms receive no anchored score, while the new terms can still reorder
+documents supported by the original query. Together, these operations broaden
+semantic coverage without broadening sparse support: Dense expands; sparse
+anchors.
+
+The evaluation mirrors this argument. A top-$L$ sensitivity study first
+examines whether the measured gains and relative ranking of query expansion
+methods change with the cutoff. We then evaluate complete-list fusion on seven
+public retrieval benchmarks, comparing our method with the unexpanded query,
+shared expansion, and representative generative expansion methods in terms of
+retrieval effectiveness and per-channel access depth. Controlled experiments
+examine the contributions of complementary reference generation, orthogonal
+residual expansion, and score-product anchoring, followed by robustness
+analyses across generation and retrieval settings. Together, these experiments
+test whether channel-asymmetric query expansion can produce better fused
+rankings while reducing the access required from both channels.

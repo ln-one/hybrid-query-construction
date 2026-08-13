@@ -1,0 +1,11 @@
+.cache/
+build/
+tmp/
+output/pdf/*-acl-draft.pdf
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
