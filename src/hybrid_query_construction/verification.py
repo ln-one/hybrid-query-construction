@@ -10,6 +10,7 @@ import yaml
 from .generation import parse_references
 from .io import read_jsonl, sha256_file
 from .models import GenerationRecord, QueryResult
+from .storage import ranking_store_digest
 from .tiny import run_tiny
 
 SECRET_PATTERNS = (
@@ -71,7 +72,7 @@ def verify_repository(root: Path) -> dict[str, object]:
                 "rankings.sqlite3" if run_id == "primary" else f"rankings-{run_id}.sqlite3"
             )
             store_path = manifest_path.parent / store_name
-            if sha256_file(store_path) != manifest["ranking_store_sha256"]:
+            if ranking_store_digest(store_path) != manifest["ranking_store_sha256"]:
                 raise ValueError("ranking store hash mismatch")
             artifact_counts["ranking_stores"] += 1
         except Exception as error:

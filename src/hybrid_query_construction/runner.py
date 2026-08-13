@@ -31,7 +31,7 @@ from .retrieval import (
     prepare_lucene_collection,
     save_embedding_matrix,
 )
-from .storage import RankingStore
+from .storage import RankingStore, ranking_store_digest
 
 
 def load_generations(path: Path | None) -> dict[tuple[str, int], GenerationRecord]:
@@ -398,7 +398,7 @@ def build_rankings(
                     )
     manifest = {
         **run_spec,
-        "ranking_store_sha256": sha256_file(store_path),
+        "ranking_store_sha256": ranking_store_digest(store_path),
     }
     manifest_name = (
         "rankings-manifest.json" if run_id == "primary" else f"rankings-{run_id}-manifest.json"

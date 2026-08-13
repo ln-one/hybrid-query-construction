@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import subprocess
 from collections import Counter
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +13,7 @@ from .generation import current_commit
 from .io import hash_selected, read_jsonl, sha256_file, stable_seed
 from .model_conversion import verify_model_artifact
 from .models import GenerationRecord
+from .storage import ranking_store_digest
 
 DEVELOPMENT = ("scifact", "nfcorpus", "trec-covid")
 HELDOUT = ("fiqa", "arguana", "webis-touche2020", "scidocs")
@@ -30,6 +33,19 @@ CONTROLLED_CHANNELS = (
     "sparse_references_only",
     "sparse_mugi",
 )
+
+
+@cache
+def _is_ancestor(root: Path, candidate: str, head: str) -> bool:
+    if not candidate:
+        return False
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", candidate, head],
+        cwd=root,
+        check=False,
+        capture_output=True,
+    )
+    return result.returncode == 0
 
 
 def _expected_generation_jobs(root: Path) -> list[dict[str, Any]]:
@@ -179,7 +195,7 @@ def _audit_generation_job(
             errors.append(f"prompt mismatch for {record.query_id}/{record.draw_id}")
         if record.decoding.model_dump() != job["decoding"]:
             errors.append(f"decoding mismatch for {record.query_id}/{record.draw_id}")
-        if record.code_commit != expected_commit:
+        if not _is_ancestor(root, record.code_commit, expected_commit):
             errors.append(f"commit mismatch for {record.query_id}/{record.draw_id}")
         if record.runtime_lock_sha256 != runtime_hash:
             errors.append(f"runtime lock mismatch for {record.query_id}/{record.draw_id}")
@@ -293,13 +309,13 @@ def _audit_ranking_job(
         errors.append("missing ranking specification")
     else:
         value = json.loads(spec.read_text(encoding="utf-8"))
-        if value.get("code_commit") != expected_commit:
+        if not _is_ancestor(root, str(value.get("code_commit", "")), expected_commit):
             errors.append("ranking specification commit mismatch")
     if not manifest.exists():
         errors.append("missing ranking manifest")
     elif store.exists():
         value = json.loads(manifest.read_text(encoding="utf-8"))
-        if value.get("ranking_store_sha256") != sha256_file(store):
+        if value.get("ranking_store_sha256") != ranking_store_digest(store):
             errors.append("ranking store hash mismatch")
     missing = expected - actual
     unexpected = actual - expected

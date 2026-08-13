@@ -1,8 +1,9 @@
+import sqlite3
 from pathlib import Path
 
 import pytest
 
-from hybrid_query_construction.storage import RankingStore
+from hybrid_query_construction.storage import RankingStore, ranking_store_digest
 
 
 def test_ranking_store_round_trip_and_hash_check(tmp_path: Path) -> None:
@@ -46,3 +47,23 @@ def test_ranking_store_rejects_unknown_documents(tmp_path: Path) -> None:
                 fallback=False,
                 generation_sha256="0" * 64,
             )
+
+
+def test_ranking_store_digest_ignores_sqlite_layout(tmp_path: Path) -> None:
+    path = tmp_path / "rankings.sqlite3"
+    with RankingStore(path, "fixture", ["d0", "d1"]) as store:
+        store.put(
+            query_id="q0",
+            draw_id=0,
+            track="base",
+            channel="dense_original",
+            reference_count=0,
+            ranking=["d1", "d0"],
+            support=2,
+            fallback=False,
+            generation_sha256="0" * 64,
+        )
+    before = ranking_store_digest(path)
+    with sqlite3.connect(path) as connection:
+        connection.execute("VACUUM")
+    assert ranking_store_digest(path) == before

@@ -219,3 +219,27 @@ class RankingStore:
             (self.dataset,),
         )
         yield from rows
+
+
+def ranking_store_digest(path: Path) -> str:
+    """Hash logical ranking contents, independent of SQLite page layout."""
+    connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:
+        metadata = connection.execute(
+            "SELECT key, value FROM metadata ORDER BY key"
+        ).fetchall()
+        rows = connection.execute(
+            """SELECT dataset, query_id, draw_id, track, channel, reference_count,
+            ranking, support, fallback, generation_sha256, ranking_sha256
+            FROM rankings
+            ORDER BY dataset, query_id, draw_id, track, channel, reference_count"""
+        )
+        parts = [canonical_json(metadata)]
+        for row in rows:
+            raw = zstd.ZstdDecompressor().decompress(row[6])
+            if sha256_bytes(raw) != row[10]:
+                raise RuntimeError("ranking artifact hash mismatch")
+            parts.append(canonical_json((*row[:6], *row[7:])))
+        return sha256_bytes("\n".join(parts).encode())
+    finally:
+        connection.close()

@@ -9,7 +9,7 @@ from .io import canonical_json, sha256_bytes, sha256_file, write_json
 from .metrics import ndcg_at_k, recall_at_k
 from .models import QueryResult
 from .replay import replay_complete_wrrf
-from .storage import RankingArtifact, RankingStore
+from .storage import RankingArtifact, RankingStore, ranking_store_digest
 
 CONTROLLED_METHODS = {
     "original": ("base:dense_original", "base:sparse_original"),
@@ -286,7 +286,7 @@ def evaluate_rankings(
         "result_rows": len(rows),
         "fixed_top_l_rows": len(fixed_rows),
         "qrels_sha256": sha256_file(qrels_path),
-        "ranking_store_sha256": sha256_file(store_path),
+        "ranking_store_sha256": ranking_store_digest(store_path),
         "protocol_file_sha256": {
             str(path.relative_to(root)): sha256_file(path)
             for path in sorted((root / "configs").rglob("*.yaml"))
