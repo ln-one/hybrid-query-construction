@@ -28,6 +28,10 @@ def parse_references(raw_text: str, expected_count: int) -> tuple[str, ...]:
         raise ValueError(f"expected exactly {expected_count} references")
     if not all(isinstance(reference, str) and reference.strip() for reference in references):
         raise ValueError("all references must be non-empty strings")
+    if any(not any(character.isalnum() for character in reference) for reference in references):
+        raise ValueError("all references must contain substantive text")
+    if any(reference.strip().casefold() in {"...", "…"} for reference in references):
+        raise ValueError("placeholder references are forbidden")
     normalized = [
         unicodedata.normalize("NFC", reference).strip().casefold() for reference in references
     ]

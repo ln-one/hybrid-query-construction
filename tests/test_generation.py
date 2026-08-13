@@ -32,6 +32,8 @@ def test_parse_allows_whole_response_fence_only() -> None:
         '["one","one"]',
         '{"references":["one"]}',
         "[]",
+        '["]"]',
+        '["..."]',
         "not json",
     ],
 )
