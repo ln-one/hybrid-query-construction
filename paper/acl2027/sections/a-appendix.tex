@@ -1,0 +1,156 @@
+\section{Generation and Reproducibility Details}
+
+\subsection{Complementary Reference Generation}
+
+We use the same revision of Qwen2.5-7B-Instruct for the model and tokenizer:
+
+\begin{center}\small
+\texttt{fe11104b620d588ccc049ff6631dd3ea002e3d98}
+\end{center}
+
+The unquantized BF16 model runs with MLX-LM 0.31.2. Decoding uses a
+temperature of 0.7, top-$p$ of 0.9, top-$k$ of 20, and a maximum of 256 new
+tokens. Queries are sorted by identifier and processed in batches of eight.
+Each batch seed is derived from the protocol version, dataset, prompt hash, and
+batch index using the first 64 bits of their SHA-256 digest.
+
+The system prompt is:
+
+\begin{quote}\small
+You generate evidence-like reference passages for information retrieval.
+
+Given one search query, return exactly five concise, complementary passages
+that could plausibly occur in relevant documents. Preserve every named entity,
+relation, number, polarity, temporal condition, scope, and constraint in the
+query. Add useful aliases, technical terminology, and paraphrases, but do not
+broaden the information need or invent a specific answer. Each passage must be
+one sentence of at most 25 words.
+
+Return one single-line JSON array containing exactly five distinct strings.
+Count the five array items before responding. Do not output an object key,
+query identifier, Markdown, placeholders, or any other text. Every item must
+contain a substantive passage.
+\end{quote}
+
+The query is supplied in a canonical JSON object with a single \texttt{query}
+field. XGrammar 0.2.1 constrains the response to a JSON array containing exactly
+five strings. Validation rejects empty passages, placeholders, and duplicates.
+An invalid response is retried once with the same seed, the previous response,
+and validation feedback. If the retry also fails, the failure is recorded and
+the corresponding query and generation run fall back to the unexpanded query.
+
+The second generator is Mistral-7B-Instruct-v0.3 at revision
+
+\begin{center}\small
+\texttt{c170c708c41dac9275d15a8fff4eca08d52bab71}.
+\end{center}
+
+It uses the same decoding, batching, and validation settings.
+
+\subsection{Query Construction}
+
+All averaging, projection, and normalization operations in orthogonal residual
+expansion use float32. Shared expansion uses the same representations of the
+query-reference pairs, but averages and normalizes them without removing the
+component parallel to the original query. Each pair is encoded as
+\texttt{query [SEP] reference}.
+
+For sparse retrieval, the expanded query contains one copy of the original
+query followed by the selected reference passages. BM25 scores under the
+original and expanded queries are stored separately before applying the
+document-wise score product. The binary-mask ablation retains the
+expanded-query score for documents matched by both queries. The references-only
+ablation removes the original query before retrieval. Our construction neither
+repeats the original query nor uses the MuGI repetition coefficient.
+
+\subsection{Baseline Reproduction}
+
+All generative baselines use the same primary generator so that their
+differences mainly reflect query construction rather than model capacity. The
+exact prompts are included in the accompanying repository.
+
+HyDE generates eight hypothetical texts per run, encodes them independently as
+documents, and averages their normalized representations. Its sparse channel
+uses the original query. FiQA, ArguAna, SciFact, and TREC-COVID use
+task-specific generation instructions; the remaining datasets use a general
+retrieval instruction. HyDE allows up to 512 new tokens per generation.
+
+Query2doc generates one pseudo-relevant document of at most 120 words. Dense
+retrieval encodes the concatenation of the original query and pseudo-document.
+Sparse retrieval concatenates five copies of the original query with the
+pseudo-document.
+
+MuGI generates five pseudo-references. Dense retrieval averages the
+representations obtained by concatenating the original query with each
+reference. Sparse retrieval repeats the original query
+
+\[
+\left\lfloor\frac{|R|}{|q_o|\beta}\right\rfloor
+\]
+
+times before appending all references, where $|\cdot|$ denotes character length
+and $\beta=4$. We reproduce MuGI's generation and query integration components
+without its pseudo-relevance feedback calibration.
+
+\subsection{Retrieval Implementation}
+
+BGE-small-en-v1.5 uses revision
+
+\begin{center}\small
+\texttt{5c38ec7c405ec4b44b94cc5a9bb96e735b38267a}.
+\end{center}
+
+Queries are prefixed with
+``Represent this sentence for searching relevant passages:'' and encoded
+with a maximum length of 512 tokens. Contriever uses mean pooling and revision
+
+\begin{center}\small
+\texttt{2bd46a25019aeea091fd42d1f0fd4801675cf699}.
+\end{center}
+
+All query and document embeddings are normalized.
+
+Pyserini 2.3.0 runs with Java 21 and uses \texttt{DefaultEnglishAnalyzer}. A
+separate Lucene index is built for each dataset and each TREC-COVID snapshot,
+so BM25 collection statistics are computed within the corresponding corpus.
+Documents with equal retrieval or fusion scores are ordered by the UTF-8 order
+of their identifiers.
+
+\subsection{Access-Depth Replay}
+
+The replay begins with empty Dense and Sparse prefixes. After $l_c$ items have
+been read from channel $c$, the maximum contribution of its next unread
+document is
+
+\[
+u_c(l_c)=\frac{1}{60+l_c+1}.
+\]
+
+The bound is zero after a channel is exhausted. At each step, the replay reads
+from the channel with the larger next-unread bound, breaking ties in favor of
+Dense.
+
+For an observed document, its accumulated contribution is a score lower bound.
+If the document has not appeared in the other channel, that channel's
+next-unread contribution supplies an additional upper bound. A document unseen
+in both channels is bounded by the sum of the two next-unread contributions.
+
+The replay stops when these bounds certify both the membership and order of the
+current top-20. The stopping depths are recorded as
+$(L_D,L_S)=(l_D,l_S)$.
+
+\subsection{Artifact Traceability}
+
+Each generation record contains the raw response, parsed passages, prompt and
+model hashes, decoding parameters, seed, retry history, runtime lock, and code
+commit. Dense and Sparse rankings are stored by channel in a compressed ranking
+store and assigned SHA-256 hashes. Each query-level result contains the method,
+generation run, effectiveness metrics, $(L_D,L_S)$, sparse support and
+exhaustion status, ordered top-20, and hashes of the generation, rankings,
+method configuration, and replay trace.
+
+The Python environment is fixed by \texttt{uv.lock}, and the Java version is
+checked before retrieval. Before held-out evaluation, the code,
+configurations, prompts, source inputs, model artifacts, generations, and
+ranking stores are recorded in a hash manifest. All reported tables are
+reconstructed from the resulting query-level records.

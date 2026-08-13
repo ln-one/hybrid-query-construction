@@ -25,6 +25,10 @@ Experiment setup translated and reviewed; formal results pending.
 - [x] Experiments Section 4.3 translated and reviewed.
 - [x] Experiments Section 4.4 translated and reviewed.
 - [x] Experiments Section 4.5 translated and reviewed.
+- [x] Reproducibility Appendix A.1--A.6 checked against the frozen protocol and
+  implementation, translated, and added to the ACL draft.
+- [x] Abstract problem statement, method summary, and evaluation scope reviewed
+  and added; empirical findings remain pending formal results.
 
 ## Capability-use audit
 
@@ -33,7 +37,10 @@ Experiment setup translated and reviewed; formal results pending.
 - Inputs: approved Chinese Introduction paragraph, evidence map, official ACL
   Anthology BibTeX records, and the official ACL style repository.
 - Artifact: ACL project skeleton, the reviewed English Introduction, Related
-  Work, Method Sections 3.1--3.4, and Experiments Sections 4.1--4.5.
+  Work, Method Sections 3.1--3.4, Experiments Sections 4.1--4.5, and
+  Reproducibility Appendix A.1--A.6, plus the result-independent portion of the
+  abstract.
 - Verification: `make clean && make` produced `build/main.pdf`; all citations
   resolved and no overfull boxes were reported.
-- Remaining risk: empirical claims and the abstract remain pending formal results.
+- Remaining risk: empirical claims and the abstract's results sentence remain
+  pending formal results.

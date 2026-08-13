@@ -20,11 +20,33 @@
 \begin{document}
 \maketitle
 
+\begin{abstract}
+LLM-based query expansion augments queries with generated document-like
+evidence. In hybrid retrieval, however, most evaluations fuse fixed top-$L$
+dense and sparse rankings. The cutoff determines both which cross-channel
+contributions enter fusion and how much of each ranking is accessed, so
+expansion gains measured at one cutoff may not persist at another. We address
+this problem by evaluating complete-list fusion quality together with the dense
+and sparse depths at which its ordered top-$K$ becomes fixed.
+
+We further introduce channel-asymmetric query expansion. A language model
+generates complementary reference passages that preserve the original query
+intent. Orthogonal residual expansion adds their new semantic directions to the
+dense query representation, while score-product anchoring uses their lexical
+evidence to rerank documents matched by the original sparse query. We evaluate
+the method on seven retrieval benchmarks through top-$L$ sensitivity analysis,
+complete-list fusion, access-depth replay, controlled comparisons, and
+robustness experiments.
+\end{abstract}
+
 \input{sections/01-introduction}
 \input{sections/02-related-work}
 \input{sections/03-method}
 \input{sections/04-experiments}
 
 \bibliography{references}
+
+\appendix
+\input{sections/a-appendix}
 
 \end{document}
