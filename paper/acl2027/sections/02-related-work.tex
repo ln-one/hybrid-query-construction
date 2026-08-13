@@ -1,0 +1,65 @@
+\section{Related Work}
+\label{sec:related-work}
+
+\subsection{LLM-Based Query Expansion}
+
+Short queries often omit expressions that appear in relevant documents.
+LLM-based query expansion supplies such expressions by generating text that
+resembles a relevant document. HyDE generates a hypothetical document and
+encodes it for dense retrieval \citep{gao-etal-2023-precise}, whereas Query2doc
+appends a generated pseudo-document to the original query for sparse and dense
+retrieval \citep{wang-etal-2023-query2doc}. Although their retrieval procedures
+differ, both methods use generated document-side language to enrich the
+information available from the original query.
+
+Later work broadens the evidence produced by the LLM. Jagerman et al. elicit
+passages, keywords, and reasoning traces through different prompts
+\citep{jagerman-etal-2023-query-expansion}, while MuGI samples multiple
+pseudo-references to cover alternative relevant expressions
+\citep{zhang-etal-2024-exploring-best}. These approaches increase the variety
+of information available for retrieval, but the added content is not uniformly
+useful. Its effect varies across queries, datasets, and retrievers, and
+irrelevant generations may reduce retrieval effectiveness
+\citep{weller-etal-2024-generative}.
+
+\subsection{Integrating Expansions into Dense and Sparse Retrieval}
+
+Generated evidence can enter retrieval at different stages. Query2doc
+incorporates it into the query text \citep{wang-etal-2023-query2doc}, whereas
+MuGI additionally pools contextualized dense representations derived from
+multiple references \citep{zhang-etal-2024-exploring-best}. Word2Passage
+reweights generated terms according to their reference granularity
+\citep{choi-etal-2025-word2passage}; Exp4Fuse combines rankings obtained from
+the original and expanded queries \citep{liu-zhang-2025-exp4fuse}; and DVCQR
+constructs separate lexical and semantic views for sparse and dense retrieval
+\citep{li-etal-2026-dvcqr}. Existing methods therefore integrate generated
+evidence at the textual, representation, term-weighting, or ranking level.
+
+Our method jointly designs reference generation and channel integration. It
+generates complementary passages that preserve the original query intent, then
+uses the same evidence asymmetrically: dense retains its new semantic
+directions, whereas sparse uses its terms only to refine matches supported by
+the original query. Unlike multi-reference pooling or independently generated
+retrieval views, our construction couples intent-preserving generation with
+dense expansion and sparse anchoring.
+
+\subsection{Hybrid Fusion under Fixed Cutoffs}
+
+Query-expansion methods commonly evaluate retrieval effectiveness after taking
+a preset number of results from each ranking. MuGI follows this protocol for
+sparse, dense, and hybrid retrieval
+\citep{zhang-etal-2024-exploring-best}, while Exp4Fuse combines fixed-depth
+rankings produced by the original and expanded queries
+\citep{liu-zhang-2025-exp4fuse}. In hybrid fusion, however, the cutoff
+determines both how much of each ranking is available and which cross-channel
+contributions enter the fused result. Reported expansion gains may therefore
+change with the selected depth.
+
+EAHR separates the fused result from the depth needed to determine it by
+defining the target over complete rankings and progressively revealing each
+channel \citep{zhang2026exact}. We use this distinction to evaluate query
+expansion. Each query construction is first assessed by the effectiveness of
+its complete-list fused ranking; dense and sparse access depths are then
+recorded when replay fixes the same ordered top-$K$. This evaluates both the
+ranking produced by an expansion and the concentration of evidence within its
+two channels.

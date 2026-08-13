@@ -1,0 +1,127 @@
+\section{Method}
+\label{sec:method}
+
+\subsection{Method Overview}
+
+Given an original query $q_o$, the generator produces a set of complementary
+reference passages $R=\{r_1,\ldots,r_n\}$ that preserve its intent while adding
+possible document-side expressions. The same references are then used to
+construct two channel-specific rankings. Orthogonal residual expansion adds
+their new semantic directions to the dense query representation. Score-product
+anchoring combines the original and expanded sparse scores for each document,
+allowing generated terms to reorder documents matched by the original query
+without expanding its lexical support. The resulting dense and sparse rankings
+are fused to produce the final result. Throughout this process, the original
+query provides the base and the generated passages provide incremental
+evidence: Dense expands; Sparse anchors.
+
+\subsection{Complementary Evidence Generation}
+
+Given $q_o$, the generator $G$ produces $n$ complementary reference passages:
+
+\[
+R=G(q_o)=\{r_1,\ldots,r_n\}.
+\]
+
+Each passage is written as a plausible excerpt from a relevant document and
+introduces a different alias, technical term, or paraphrase. The prompt
+preserves the entities, relations, numbers, polarity, temporal conditions,
+scope, and constraints of $q_o$, while prohibiting broader information needs
+or invented answers. The passages therefore vary in expression while
+describing the same underlying query intent.
+
+\subsection{Channel-Asymmetric Query Construction}
+
+\subsubsection{Orthogonal Residual Expansion}
+
+Let $f_D$ denote the dense encoder. We first encode the original query as a
+unit vector
+
+\[
+\mathbf v_o=\operatorname{norm}(f_D(q_o)),
+\]
+
+and average the representations obtained by concatenating $q_o$ with each
+reference passage:
+
+\[
+\bar{\mathbf v}_r=
+\frac{1}{n}\sum_{i=1}^{n}
+f_D(\operatorname{concat}(q_o,r_i)).
+\]
+
+We remove from $\bar{\mathbf v}_r$ the component parallel to $\mathbf v_o$,
+then add the remaining orthogonal residual to the original query:
+
+\[
+\mathbf e_D=
+\operatorname{norm}\!\left(
+\mathbf v_o+\bar{\mathbf v}_r-
+(\mathbf v_o^\top\bar{\mathbf v}_r)\mathbf v_o
+\right).
+\]
+
+The original query remains the base direction, while the reference passages
+contribute only semantic directions not already represented by it. If the
+references provide no orthogonal component, then $\mathbf e_D=\mathbf v_o$.
+Documents are ranked by their similarity to $\mathbf e_D$, producing the dense
+ranking $\pi_D$.
+
+\subsubsection{Score-Product Anchoring}
+
+For sparse retrieval, we form an expanded query
+
+\[
+q_r=\operatorname{concat}(q_o,r_1,\ldots,r_n).
+\]
+
+A non-negative sparse scorer $s_S$ evaluates each document $d$ under the
+original and expanded queries:
+
+\[
+s_o(d)=s_S(q_o,d),
+\qquad
+s_r(d)=s_S(q_r,d).
+\]
+
+We define the anchored score as their document-wise product:
+
+\[
+s_A(d)=s_o(d)s_r(d).
+\]
+
+A document receives a nonzero anchored score only if it matches both queries.
+Because $q_r$ contains $q_o$, the anchored ranking retains the lexical support
+of the original query, while the generated terms change the relative scores
+within that support. Sorting documents by $s_A(d)$ produces the sparse ranking
+$\pi_S$.
+
+\subsection{Quality and Access Analysis}
+
+After constructing the dense ranking $\pi_D$ and sparse ranking $\pi_S$, we
+fuse their complete rankings using weighted reciprocal rank fusion:
+
+\[
+F(d)=
+\frac{w_D}{\kappa+\operatorname{rank}_{\pi_D}(d)}
++
+\frac{w_S}{\kappa+\operatorname{rank}_{\pi_S}(d)}.
+\]
+
+A missing rank contributes zero. Documents are ordered by $F(d)$, with
+document identifiers used to break ties, and the first $K$ documents form the
+ordered result $T_K$. Retrieval effectiveness is evaluated on $T_K$.
+
+We then replay incremental access to $\pi_D$ and $\pi_S$. After reading $L_c$
+items from channel $c$, the largest contribution of its next unread item is
+
+\[
+u_c(L_c)=\frac{w_c}{\kappa+L_c+1}.
+\]
+
+These bounds determine whether unread ranks can still change the members or
+order of the current top-$K$. If they can, the replay reads from the channel
+with the larger $u_c$, breaking ties in favor of Dense; otherwise, it stops and
+records $(L_D,L_S)$. The resulting measurements describe both the retrieval
+quality produced by each query construction and the depth at which its fused
+result becomes fixed.

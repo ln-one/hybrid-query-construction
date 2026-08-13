@@ -2,7 +2,7 @@
 
 ## Current stage
 
-Introduction translation, paragraph-by-paragraph author review.
+Method translation, paragraph-by-paragraph author review.
 
 ## Status
 
@@ -12,6 +12,14 @@ Introduction translation, paragraph-by-paragraph author review.
 - [x] Introduction paragraph 1 approved by the author.
 - [x] Introduction paragraphs 2--4 translated, reviewed, and cited.
 - [x] Introduction closing paragraph translated and approved by the author.
+- [x] Related Work Section 2.1 translated, reviewed, and cited.
+- [x] Related Work Section 2.2 translated, reviewed, and cited.
+- [x] Related Work Section 2.3 translated, reviewed, and cited.
+- [x] Method Section 3.1 translated and reviewed.
+- [x] Method Section 3.2 translated and reviewed.
+- [x] Method Section 3.3.1 translated and reviewed.
+- [x] Method Section 3.3.2 translated and reviewed.
+- [x] Method Section 3.4 translated and reviewed.
 
 ## Capability-use audit
 
@@ -19,7 +27,8 @@ Introduction translation, paragraph-by-paragraph author review.
   academic translation, and LaTeX output.
 - Inputs: approved Chinese Introduction paragraph, evidence map, official ACL
   Anthology BibTeX records, and the official ACL style repository.
-- Artifact: ACL project skeleton and the complete reviewed English Introduction.
+- Artifact: ACL project skeleton, the reviewed English Introduction and Related
+  Work, and Method Sections 3.1--3.4.
 - Verification: `make clean && make` produced `build/main.pdf`; all citations
   resolved and no overfull boxes were reported.
 - Remaining risk: empirical claims and the abstract remain pending formal results.
