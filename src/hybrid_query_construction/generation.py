@@ -13,6 +13,10 @@ from .model_conversion import verify_model_artifact
 from .models import DecodingConfig, GenerationAttempt, GenerationRecord
 
 
+def grammar_owned_stop_tokens(eos_token_ids: list[int]) -> list[list[int]]:
+    return [[int(token)] for token in eos_token_ids]
+
+
 def parse_references(raw_text: str, expected_count: int) -> tuple[str, ...]:
     text = raw_text.strip()
     if text.startswith("```") and text.endswith("```"):
@@ -79,9 +83,7 @@ class MLXGenerator:
 
         class Processor:
             def __init__(self, grammar: Any, eos_token_id: int) -> None:
-                self.matcher = xgr.GrammarMatcher(
-                    grammar, terminate_without_stop_token=True
-                )
+                self.matcher = xgr.GrammarMatcher(grammar, terminate_without_stop_token=True)
                 self.vocab_size = grammar.tokenizer_info.vocab_size
                 self.bitmask = xgr.allocate_token_bitmask(1, self.vocab_size)
                 self.eos_token_id = eos_token_id
@@ -126,7 +128,6 @@ class MLXGenerator:
             {"role": "user", "content": user_content},
         ]
         if previous_invalid_output is not None:
-            slots = ",".join(f'"r{index}"' for index in range(1, expected_count + 1))
             actual_count: int | None = None
             try:
                 previous_value = json.loads(previous_invalid_output.strip())
@@ -151,9 +152,9 @@ class MLXGenerator:
                         "content": (
                             "The previous output failed strict JSON validation. Correct it. "
                             + count_feedback
-                            + f"Return exactly [{slots}], replacing every slot with a distinct "
-                            "passage. Output only that JSON array: no object key, query "
-                            "identifier, explanation, Markdown, or surrounding text."
+                            + "Return one JSON array whose items are distinct, substantive "
+                            "passages. Output only that JSON array: no placeholders, object "
+                            "key, query identifier, explanation, Markdown, or surrounding text."
                         ),
                     },
                 ]
@@ -185,13 +186,9 @@ class MLXGenerator:
             for query_id, query, _, invalid in requests
         ]
         mx.random.seed(seed)
-        schema_stop = self.tokenizer.encode(decoding.stop_sequence)
         generator = BatchGenerator(
             self.model,
-            stop_tokens=[
-                *[[token] for token in self.tokenizer.eos_token_ids],
-                schema_stop,
-            ],
+            stop_tokens=grammar_owned_stop_tokens(self.tokenizer.eos_token_ids),
             sampler=make_sampler(
                 temp=decoding.temperature,
                 top_p=decoding.top_p,
@@ -210,16 +207,7 @@ class MLXGenerator:
             while responses := generator.next_generated():
                 for response in responses:
                     if response.finish_reason == "stop":
-                        matched = (
-                            list(response.match_sequence)
-                            if response.match_sequence is not None
-                            else []
-                        )
-                        if matched == schema_stop:
-                            generated[response.uid].extend(schema_stop)
-                        finishes[response.uid] = (
-                            "schema_stop" if matched == schema_stop else "eos_stop"
-                        )
+                        finishes[response.uid] = "eos_stop"
                     else:
                         generated[response.uid].append(int(response.token))
                         if response.finish_reason is not None:

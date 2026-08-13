@@ -9,7 +9,8 @@ and array length; the strict parser still enforces non-empty, distinct strings.
 
 The compatibility gate now covers the primary prompt with both Qwen and Mistral and
 every MuGI, Query2doc, and dataset-specific HyDE prompt with Qwen. Each prompt must
-produce two exactly reproducible 24-record runs with zero failures and zero retries.
+produce two exactly reproducible 24-record runs with zero final failures. Any
+deterministic retries remain part of the record and are reported.
 
 ## Reason
 

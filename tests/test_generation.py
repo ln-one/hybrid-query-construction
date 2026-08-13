@@ -4,13 +4,21 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from hybrid_query_construction.generation import parse_references, run_generation
+from hybrid_query_construction.generation import (
+    grammar_owned_stop_tokens,
+    parse_references,
+    run_generation,
+)
 from hybrid_query_construction.models import DecodingConfig, GenerationAttempt
 
 
 def test_parse_exact_reference_object() -> None:
     raw = '["one","two","three","four","five"]'
     assert parse_references(raw, 5) == ("one", "two", "three", "four", "five")
+
+
+def test_grammar_owned_termination_only_registers_eos_tokens() -> None:
+    assert grammar_owned_stop_tokens([1, 2]) == [[1], [2]]
 
 
 def test_parse_allows_whole_response_fence_only() -> None:
@@ -23,7 +31,7 @@ def test_parse_allows_whole_response_fence_only() -> None:
     [
         '["one","one"]',
         '{"references":["one"]}',
-        '[]',
+        "[]",
         "not json",
     ],
 )

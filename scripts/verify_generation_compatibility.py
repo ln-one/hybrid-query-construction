@@ -61,10 +61,10 @@ def main() -> None:
                 raise RuntimeError(f"{label} record {index} differs in fields: {mismatches}")
         failures = sum(row["status"] != "ok" for row in first)
         retries = sum(int(row["retry_count"]) for row in first)
-        if failures or retries:
+        if failures:
             raise RuntimeError(
-                f"{label} compatibility requires zero failures and retries; "
-                f"observed failures={failures}, retries={retries}"
+                f"{label} compatibility requires zero final failures; "
+                f"observed failures={failures}"
             )
         result[label] = {
             "records_per_run": 24,

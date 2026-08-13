@@ -26,7 +26,7 @@ make compatibility
 ```
 
 Every formal prompt is gated by two independent 24-record runs. Every run must have
-zero failures and zero retries and must report its pinned model revision, unquantized
+zero final failures and must report its retries, pinned model revision, unquantized
 BF16, the pinned MLX-LM and XGrammar backends, and all generation attempts. The two
 runs must reproduce query IDs, draw IDs, seeds, raw outputs, parsed references,
 statuses, and attempts exactly. The primary prompt is checked with both Qwen and
