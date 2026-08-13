@@ -19,10 +19,7 @@ def parse_references(raw_text: str, expected_count: int) -> tuple[str, ...]:
         lines = text.splitlines()
         if len(lines) >= 3:
             text = "\n".join(lines[1:-1]).strip()
-    value = json.loads(text)
-    if not isinstance(value, dict) or set(value) != {"references"}:
-        raise ValueError("expected one object containing only 'references'")
-    references = value["references"]
+    references = json.loads(text)
     if not isinstance(references, list) or len(references) != expected_count:
         raise ValueError(f"expected exactly {expected_count} references")
     if not all(isinstance(reference, str) and reference.strip() for reference in references):
@@ -41,33 +38,122 @@ def current_commit(root: Path) -> str:
 
 class MLXGenerator:
     def __init__(self, model_directory: Path) -> None:
+        import xgrammar as xgr
         from mlx_lm import load
 
         self.model_directory = model_directory
         self.manifest = verify_model_artifact(model_directory)
         self.model, self.tokenizer = load(str(model_directory))
+        model_config = json.loads((model_directory / "config.json").read_text(encoding="utf-8"))
+        hf_tokenizer = getattr(self.tokenizer, "_tokenizer", self.tokenizer)
+        eos_token_ids = [int(token_id) for token_id in self.tokenizer.eos_token_ids]
+        self.eos_token_ids = tuple(eos_token_ids)
+        tokenizer_info = xgr.TokenizerInfo.from_huggingface(
+            hf_tokenizer,
+            vocab_size=int(model_config["vocab_size"]),
+            stop_token_ids=eos_token_ids,
+        )
+        self.grammar_compiler = xgr.GrammarCompiler(tokenizer_info)
+        self.compiled_grammars: dict[int, Any] = {}
+
+    def _compiled_reference_grammar(self, expected_count: int) -> Any:
+        grammar = self.compiled_grammars.get(expected_count)
+        if grammar is None:
+            grammar = self.grammar_compiler.compile_json_schema(
+                {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": expected_count,
+                    "maxItems": expected_count,
+                },
+                any_whitespace=True,
+                strict_mode=True,
+            )
+            self.compiled_grammars[expected_count] = grammar
+        return grammar
+
+    def _grammar_processor(self, expected_count: int) -> Any:
+        import mlx.core as mx
+        import xgrammar as xgr
+        from xgrammar.kernels.apply_token_bitmask_mlx import apply_token_bitmask_mlx
+
+        class Processor:
+            def __init__(self, grammar: Any, eos_token_id: int) -> None:
+                self.matcher = xgr.GrammarMatcher(
+                    grammar, terminate_without_stop_token=True
+                )
+                self.vocab_size = grammar.tokenizer_info.vocab_size
+                self.bitmask = xgr.allocate_token_bitmask(1, self.vocab_size)
+                self.eos_token_id = eos_token_id
+
+            def __call__(self, tokens: Any, logits: Any) -> Any:
+                if tokens.size:
+                    last_token = int(tokens[-1].item())
+                    if not self.matcher.is_terminated() and not self.matcher.accept_token(
+                        last_token
+                    ):
+                        # The first observed token belongs to the prompt rather than
+                        # the completion. Resetting here starts the grammar at the
+                        # first model-generated token.
+                        self.matcher.reset()
+                if self.matcher.is_terminated():
+                    token_ids = mx.arange(logits.shape[-1])
+                    return mx.where(token_ids == self.eos_token_id, logits, -mx.inf)
+                self.matcher.fill_next_token_bitmask(self.bitmask)
+                return apply_token_bitmask_mlx(
+                    mx.array(self.bitmask.numpy()), logits, self.vocab_size
+                )
+
+        return Processor(
+            self._compiled_reference_grammar(expected_count),
+            self.eos_token_ids[0],
+        )
 
     def _prompt_tokens(
         self,
         system_prompt: str,
         query_id: str,
         query: str,
+        expected_count: int,
         previous_invalid_output: str | None = None,
     ) -> list[int]:
-        user_content = canonical_json({"query_id": query_id, "query": query})
+        # Keep the experiment identifier out of the model-visible request.  It is
+        # provenance metadata, not part of the information need, and smaller
+        # instruction-tuned models otherwise tend to copy it into the response.
+        user_content = canonical_json({"query": query})
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content},
         ]
         if previous_invalid_output is not None:
+            slots = ",".join(f'"r{index}"' for index in range(1, expected_count + 1))
+            actual_count: int | None = None
+            try:
+                previous_value = json.loads(previous_invalid_output.strip())
+                if isinstance(previous_value, list):
+                    actual_count = len(previous_value)
+                elif isinstance(previous_value, dict) and isinstance(
+                    previous_value.get("references"), list
+                ):
+                    actual_count = len(previous_value["references"])
+            except json.JSONDecodeError:
+                pass
+            count_feedback = (
+                f"You returned {actual_count} passages; exactly {expected_count} are required. "
+                if actual_count is not None
+                else f"Exactly {expected_count} passages are required. "
+            )
             messages.extend(
                 [
                     {"role": "assistant", "content": previous_invalid_output},
                     {
                         "role": "user",
                         "content": (
-                            "The previous output failed strict JSON validation. Return only "
-                            "the requested JSON object with the exact reference count."
+                            "The previous output failed strict JSON validation. Correct it. "
+                            + count_feedback
+                            + f"Return exactly [{slots}], replacing every slot with a distinct "
+                            "passage. Output only that JSON array: no object key, query "
+                            "identifier, explanation, Markdown, or surrounding text."
                         ),
                     },
                 ]
@@ -82,6 +168,7 @@ class MLXGenerator:
         requests: list[tuple[str, str, int, str | None]],
         seed: int,
         decoding: DecodingConfig,
+        expected_count: int,
     ) -> list[tuple[str, int, int, str]]:
         import mlx.core as mx
         from mlx_lm.generate import BatchGenerator
@@ -94,7 +181,7 @@ class MLXGenerator:
         if decoding.repetition_penalty != 1.0:
             raise ValueError("formal MLX generation supports repetition_penalty=1.0")
         prompts = [
-            self._prompt_tokens(system_prompt, query_id, query, invalid)
+            self._prompt_tokens(system_prompt, query_id, query, expected_count, invalid)
             for query_id, query, _, invalid in requests
         ]
         mx.random.seed(seed)
@@ -111,7 +198,12 @@ class MLXGenerator:
                 top_k=decoding.top_k,
             ),
         )
-        uids = generator.insert(prompts, [decoding.max_new_tokens] * len(prompts))
+        processors = [[self._grammar_processor(expected_count)] for _ in prompts]
+        uids = generator.insert(
+            prompts,
+            [decoding.max_new_tokens] * len(prompts),
+            logits_processors=processors,
+        )
         generated = {uid: [] for uid in uids}
         finishes: dict[int, str] = {}
         try:
@@ -125,7 +217,9 @@ class MLXGenerator:
                         )
                         if matched == schema_stop:
                             generated[response.uid].extend(schema_stop)
-                        finishes[response.uid] = "schema_stop"
+                        finishes[response.uid] = (
+                            "schema_stop" if matched == schema_stop else "eos_stop"
+                        )
                     else:
                         generated[response.uid].append(int(response.token))
                         if response.finish_reason is not None:
@@ -174,6 +268,14 @@ def run_generation(
         raise RuntimeError(
             f"mlx-lm version mismatch: {backend_version} != {model_config['backend_version']}"
         )
+    structured_backend = str(model_config["structured_output"]["backend"])
+    structured_backend_version = importlib.metadata.version(structured_backend)
+    expected_structured_version = str(model_config["structured_output"]["version"])
+    if structured_backend_version != expected_structured_version:
+        raise RuntimeError(
+            "structured-output backend version mismatch: "
+            f"{structured_backend_version} != {expected_structured_version}"
+        )
     generator = MLXGenerator(root / model_config["local_model_path"])
     expected_model = (
         model_config["model_id"],
@@ -215,7 +317,9 @@ def run_generation(
             for query_id in batch_ids
             for draw_id in range(draw_count)
         ]
-        initial_outputs = generator.generate_batch(prompt, all_requests, seed, decoding)
+        initial_outputs = generator.generate_batch(
+            prompt, all_requests, seed, decoding, expected_count
+        )
         output_by_pair = {
             (query_id, draw_id): output
             for (query_id, _, draw_id, _), output in zip(
@@ -257,7 +361,9 @@ def run_generation(
             states[(query_id, draw_id)] = state
 
         if retry_requests:
-            retry_outputs = generator.generate_batch(prompt, retry_requests, seed, decoding)
+            retry_outputs = generator.generate_batch(
+                prompt, retry_requests, seed, decoding, expected_count
+            )
             for request, output in zip(retry_requests, retry_outputs, strict=True):
                 query_id, _, draw_id, _ = request
                 raw, prompt_tokens, completion_tokens, finish_reason = output
@@ -301,6 +407,8 @@ def run_generation(
                 tokenizer_revision=model_config["tokenizer_revision"],
                 backend=model_config["backend"],
                 backend_version=backend_version,
+                structured_output_backend=structured_backend,
+                structured_output_backend_version=structured_backend_version,
                 model_artifact_sha256=model_artifact_sha256,
                 seed=seed,
                 decoding=decoding,

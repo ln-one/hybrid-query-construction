@@ -43,6 +43,8 @@ class GenerationRecord(StrictModel):
     tokenizer_revision: str
     backend: str
     backend_version: str
+    structured_output_backend: str
+    structured_output_backend_version: str
     model_artifact_sha256: str
     seed: int = Field(ge=0)
     decoding: DecodingConfig

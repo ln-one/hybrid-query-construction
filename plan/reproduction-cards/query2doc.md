@@ -15,3 +15,5 @@ or introducing an in-domain example advantage, formal-v1 uses a frozen instructi
 prompt with the common open generator. This is reported as a normalized reproduction;
 the deviation is never described as an exact paper reproduction.
 
+The single pseudo-document is emitted as a grammar-constrained one-string JSON array;
+the grammar changes only the response container.

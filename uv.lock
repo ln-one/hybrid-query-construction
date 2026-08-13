@@ -109,6 +109,21 @@ wheels = [
 ]
 
 [[package]]
+name = "apache-tvm-ffi"
+version = "0.1.13.post3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/14/14/caee1214caea4b631aa98000fda0c3d2b9ed066505dfd36044d3b9c6901a/apache_tvm_ffi-0.1.13.post3.tar.gz", hash = "sha256:b8153f020418df39cd93c3a6beda9d8c9b6e49b4e1b96de26ea6889c32347a00", size = 3017667, upload-time = "2026-08-10T14:01:07.533Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/2a/45d790a1a0d3c660a7a02d4cffb3defba29cf76c5d74f4e1d8547cfb59e4/apache_tvm_ffi-0.1.13.post3-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:e4853ab8283ea15a094887ad561115454a47ae2d9ac776c0570f3771b9a51e65", size = 2690833, upload-time = "2026-08-10T14:00:29.357Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/c4/db872a3d3ff7ba718cc76b8076b4dfd80eb5b6a36ff5b131aca443754e66/apache_tvm_ffi-0.1.13.post3-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c108c26935a609b636bb1a53df6d7c53ab776550ad04f17d6dcb35e883112f78", size = 2755741, upload-time = "2026-08-10T14:00:31.291Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/59/0a79fd19f2186ace946204e0c8ff92148d3ca3fb1c92bf75b9ce5945c795/apache_tvm_ffi-0.1.13.post3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:edaca70656f87831c3b4989169b1d85fe563ccd6d2e2cadc1f4f5880e1295f7a", size = 2955490, upload-time = "2026-08-10T14:00:33.146Z" },
+    { url = "https://files.pythonhosted.org/packages/15/46/93b2bb04e7f2761dbcc590eda5031a3543936e659cb5bbd04bbfefab2577/apache_tvm_ffi-0.1.13.post3-cp312-cp312-win_amd64.whl", hash = "sha256:295900a3bf111f133be5dff9f4d92d943f01e5e4ce3da6234f02d0e51a8cf14d", size = 3185372, upload-time = "2026-08-10T14:00:35.225Z" },
+]
+
+[[package]]
 name = "attrs"
 version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -823,6 +838,7 @@ dependencies = [
     { name = "tabulate" },
     { name = "torch" },
     { name = "transformers" },
+    { name = "xgrammar", extra = ["metal"] },
     { name = "zstandard" },
 ]
 
@@ -852,6 +868,7 @@ requires-dist = [
     { name = "tabulate", specifier = "==0.9.0" },
     { name = "torch", specifier = "==2.13.0" },
     { name = "transformers", specifier = "==5.15.0" },
+    { name = "xgrammar", extras = ["metal"], specifier = "==0.2.1" },
     { name = "zstandard", specifier = "==0.25.0" },
 ]
 provides-extras = ["dev"]
@@ -2545,6 +2562,33 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/dd/b2/381be8cfdee792dd117872481b6e378f85c957dd7c5bca38897b08f765fd/werkzeug-3.1.8.tar.gz", hash = "sha256:9bad61a4268dac112f1c5cd4630a56ede601b6ed420300677a869083d70a4c44", size = 875852, upload-time = "2026-04-02T18:49:14.268Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/93/8c/2e650f2afeb7ee576912636c23ddb621c91ac6a98e66dc8d29c3c69446e1/werkzeug-3.1.8-py3-none-any.whl", hash = "sha256:63a77fb8892bf28ebc3178683445222aa500e48ebad5ec77b0ad80f8726b1f50", size = 226459, upload-time = "2026-04-02T18:49:12.72Z" },
+]
+
+[[package]]
+name = "xgrammar"
+version = "0.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "apache-tvm-ffi" },
+    { name = "numpy" },
+    { name = "pydantic" },
+    { name = "torch" },
+    { name = "transformers" },
+    { name = "triton", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d8/ea/6394caddd078d33772070eefaaf77cb0a826a3047b908b688dece7d040b5/xgrammar-0.2.1.tar.gz", hash = "sha256:4c48c251b75d211e9ffa7f4f4ac8b5b0164f89fd5f0d1883ad7ff4554922030d", size = 2427065, upload-time = "2026-05-17T21:39:26.576Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c5/87/af20928af1c7773b1d064743de0f291698dd531e5deee19fcda388c3495e/xgrammar-0.2.1-cp312-cp312-macosx_10_14_x86_64.whl", hash = "sha256:0560568654e7745a80715dd87457f1feb3a4edf9d3894e47ab5c967f5d799ade", size = 23290997, upload-time = "2026-05-17T21:37:47.413Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/e3/9b803c8168290421b3e79b001a823a7e381039fcdd349999c2eeaf454989/xgrammar-0.2.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:29756a266a62da398151946f3d912a5b737df2000a7023696449f9eec0996208", size = 23202397, upload-time = "2026-05-17T21:37:50.987Z" },
+    { url = "https://files.pythonhosted.org/packages/44/60/7c6194b66e043f36a7fbdbf7e6e0e4c94b151f7e53ad1b197f53e711f5d1/xgrammar-0.2.1-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:9e8dd9853958a263b4015ce79133a0ff4eaa9d22ef781fb2350c7dfc40c2c012", size = 44218929, upload-time = "2026-05-17T21:37:56.155Z" },
+    { url = "https://files.pythonhosted.org/packages/96/4b/327b3cf702b685a2be28d15490faa4beeac00c4fbcf9bb2d7db0fda32931/xgrammar-0.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:cbc6014dc1c92fc317b14519121c8163fe35fd934179e5a45d83f780ff231826", size = 44678489, upload-time = "2026-05-17T21:38:00.791Z" },
+    { url = "https://files.pythonhosted.org/packages/57/39/69a5ba4dfa5e11a36265f69de3e16ee65ac9e77840c010056a2d8e99a875/xgrammar-0.2.1-cp312-cp312-win_amd64.whl", hash = "sha256:9bd16e92b4385cb5ded48d65de80e4ee871b6b427b2ded99ac5028b907bf870f", size = 7409599, upload-time = "2026-05-17T21:38:03.829Z" },
+]
+
+[package.optional-dependencies]
+metal = [
+    { name = "mlx-lm", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
 ]
 
 [[package]]

@@ -45,9 +45,11 @@ comparator. All dataset-level estimates are also reported.
 
 ## Failure policy
 
-Generation validates strict JSON with exactly five distinct strings. A parse failure
-receives one retry with the same seed. A second failure is recorded and all generated
-methods use Original for that query/draw. No failed cell is silently dropped.
+Generation uses XGrammar 0.2.1 to constrain only the JSON structure and exact array
+length. The model still samples passage text with the declared decoding settings.
+Validation additionally requires five distinct, non-empty strings. A validation
+failure receives one retry with the same seed. A second failure is recorded and all
+generated methods use Original for that query/draw. No failed cell is silently dropped.
 
 Any bug discovered after qrels access increments the protocol version and reruns all
 affected held-out conditions. No method, prompt, parameter, preferred draw, or dataset

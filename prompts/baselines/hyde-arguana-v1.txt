@@ -1,4 +1,4 @@
 Write eight counterarguments to the passage supplied as the search query, each one
-sentence of at most 25 words. Return one single-line JSON object and no other text. The
-final character must be `}`:
-{"references":["...","...","...","...","...","...","...","..."]}
+sentence of at most 25 words. Return one single-line JSON array containing exactly
+eight strings and no other text. The final character must be `]`:
+["...","...","...","...","...","...","...","..."]

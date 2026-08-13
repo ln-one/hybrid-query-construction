@@ -17,7 +17,6 @@ The feedback-calibration stage is excluded because the planned comparison concer
 query construction before retrieval. The row is named `mugi`, but the report explicitly
 qualifies it as MuGI integration without pseudo-relevance-feedback calibration.
 
-The zero-shot passage intent from the public code is adapted to strict JSON. All five
-passages are generated in one response under the same frozen generator used by the
-proposed method.
-
+The zero-shot passage intent from the public code is adapted to an exact-length JSON
+array. All five passages are generated in one response under the same frozen generator
+used by the proposed method. The grammar constrains serialization only.

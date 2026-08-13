@@ -6,6 +6,10 @@ primary:
   dtype: bfloat16
   backend: mlx_lm
   backend_version: 0.31.2
+  structured_output:
+    backend: xgrammar
+    version: 0.2.1
+    constraint: exact_length_json_string_array
   local_model_path: data/cache/models/qwen2.5-7b-instruct-mlx-bf16
   query_batch_size: 8
   draws: 3
@@ -17,7 +21,7 @@ primary:
     top_k: 20
     repetition_penalty: 1.0
     max_new_tokens: 256
-    stop_sequence: "}"
+    stop_sequence: "]"
   prompt: prompts/primary-reference-v1.txt
 robustness:
   model_id: mistralai/Mistral-7B-Instruct-v0.3
@@ -26,6 +30,10 @@ robustness:
   dtype: bfloat16
   backend: mlx_lm
   backend_version: 0.31.2
+  structured_output:
+    backend: xgrammar
+    version: 0.2.1
+    constraint: exact_length_json_string_array
   local_model_path: data/cache/models/mistral-7b-instruct-v0.3-mlx-bf16
   query_batch_size: 8
   draws: 3
@@ -39,7 +47,7 @@ robustness:
     top_k: 20
     repetition_penalty: 1.0
     max_new_tokens: 256
-    stop_sequence: "}"
+    stop_sequence: "]"
 seed_rule: first_64_bits_sha256_protocol_dataset_prompt_fixed_batch_index
 draw_execution: three_samples_per_query_in_fixed_sorted_query_batches
 failure_policy: one_same_seed_retry_then_original_fallback

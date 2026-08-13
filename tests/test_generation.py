@@ -9,21 +9,21 @@ from hybrid_query_construction.models import DecodingConfig, GenerationAttempt
 
 
 def test_parse_exact_reference_object() -> None:
-    raw = '{"references":["one","two","three","four","five"]}'
+    raw = '["one","two","three","four","five"]'
     assert parse_references(raw, 5) == ("one", "two", "three", "four", "five")
 
 
 def test_parse_allows_whole_response_fence_only() -> None:
-    raw = '```json\n{"references":["one"]}\n```'
+    raw = '```json\n["one"]\n```'
     assert parse_references(raw, 1) == ("one",)
 
 
 @pytest.mark.parametrize(
     "raw",
     [
-        '{"references":["one","one"]}',
-        '{"references":["one"],"extra":1}',
-        '{"references":[]}',
+        '["one","one"]',
+        '{"references":["one"]}',
+        '[]',
         "not json",
     ],
 )
@@ -63,11 +63,12 @@ def test_successful_retry_is_recorded_as_ok(
             requests: list[tuple[str, str, int, str | None]],
             seed: int,
             decoding: DecodingConfig,
+            expected_count: int,
         ) -> list[tuple[str, int, int, str]]:
             self.calls += 1
             if self.calls == 1:
                 return [("not json", 3, 2, "schema_stop") for _ in requests]
-            return [('{"references":["fixed"]}', 5, 4, "schema_stop") for _ in requests]
+            return [('["fixed"]', 5, 4, "schema_stop") for _ in requests]
 
     root = tmp_path
     (root / "uv.lock").write_text("lock", encoding="utf-8")
@@ -78,7 +79,7 @@ def test_successful_retry_is_recorded_as_ok(
     monkeypatch.setattr("hybrid_query_construction.generation.current_commit", lambda _: "c0")
     monkeypatch.setattr(
         "hybrid_query_construction.generation.importlib.metadata.version",
-        lambda _: "0.31.2",
+        lambda name: "0.31.2" if name == "mlx-lm" else "0.2.1",
     )
     run_generation(
         root=root,
@@ -93,6 +94,7 @@ def test_successful_retry_is_recorded_as_ok(
             "dtype": "bfloat16",
             "backend": "mlx_lm",
             "backend_version": "0.31.2",
+            "structured_output": {"backend": "xgrammar", "version": "0.2.1"},
             "local_model_path": "model",
             "query_batch_size": 8,
             "draws": 1,
@@ -104,7 +106,7 @@ def test_successful_retry_is_recorded_as_ok(
                 "top_k": 20,
                 "repetition_penalty": 1.0,
                 "max_new_tokens": 32,
-                "stop_sequence": "}",
+                "stop_sequence": "]",
             },
         },
         protocol_version="test-v1",
@@ -114,4 +116,6 @@ def test_successful_retry_is_recorded_as_ok(
     assert record["status"] == "ok"
     assert record["parsed_references"] == ["fixed"]
     assert record["retry_count"] == 1
+    assert record["structured_output_backend"] == "xgrammar"
+    assert record["structured_output_backend_version"] == "0.2.1"
     assert len(record["attempts"]) == 2

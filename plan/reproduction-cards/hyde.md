@@ -7,14 +7,14 @@
 
 ## Formal-v1 interpretation
 
-The public task instructions are adapted only to require strict JSON. Eight
+The public task instructions are adapted only to require an exact-length JSON array. Eight
 hypothetical passages are generated per draw, matching the official generator's
 default sample count. Dense retrieval averages the hypothetical-passage embeddings
 and normalizes the result. Sparse remains the
 original BM25 query because HyDE is a Dense method.
 
-The eight passages are emitted as one strict JSON record with a 512-token completion
-ceiling. This preserves the eight-passage integration while making the open-model
+The eight passages are emitted as one grammar-constrained JSON array with a 512-token
+completion ceiling. This preserves the eight-passage integration while making the open-model
 generation call auditable; it is a normalized reproduction rather than an API-level
 replica of the original eight-completion request.
 

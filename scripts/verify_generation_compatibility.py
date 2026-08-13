@@ -13,6 +13,8 @@ FIELDS = (
     "model_revision",
     "backend",
     "backend_version",
+    "structured_output_backend",
+    "structured_output_backend_version",
     "model_artifact_sha256",
     "seed",
     "decoding",

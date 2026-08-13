@@ -30,7 +30,7 @@ def verify_repository(root: Path) -> dict[str, object]:
             errors.append(f"invalid schema_version: {path.relative_to(root)}")
     prompt = root / "prompts" / "primary-reference-v1.txt"
     try:
-        parse_references('{"references":["a","b","c","d","e"]}', 5)
+        parse_references('["a","b","c","d","e"]', 5)
     except ValueError as error:
         errors.append(f"generation parser smoke failed: {error}")
     candidates = subprocess.check_output(

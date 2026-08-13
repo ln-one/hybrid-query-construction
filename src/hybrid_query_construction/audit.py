@@ -66,10 +66,12 @@ def _expected_generation_jobs(root: Path) -> list[dict[str, Any]]:
                         "top_k": 20,
                         "repetition_penalty": 1.0,
                         "max_new_tokens": 512 if family == "hyde" else 256,
-                        "stop_sequence": "}",
+                        "stop_sequence": "]",
                     },
                     "backend": "mlx_lm",
                     "backend_version": "0.31.2",
+                    "structured_output_backend": "xgrammar",
+                    "structured_output_backend_version": "0.2.1",
                     "query_batch_size": 8,
                     "local_model_path": "data/cache/models/qwen2.5-7b-instruct-mlx-bf16",
                 }
@@ -94,10 +96,12 @@ def _expected_generation_jobs(root: Path) -> list[dict[str, Any]]:
                     "top_k": 20,
                     "repetition_penalty": 1.0,
                     "max_new_tokens": 256,
-                    "stop_sequence": "}",
+                    "stop_sequence": "]",
                 },
                 "backend": "mlx_lm",
                 "backend_version": "0.31.2",
+                "structured_output_backend": "xgrammar",
+                "structured_output_backend_version": "0.2.1",
                 "query_batch_size": 8,
                 "local_model_path": "data/cache/models/mistral-7b-instruct-v0.3-mlx-bf16",
             }
@@ -158,6 +162,17 @@ def _audit_generation_job(
             errors.append(f"backend mismatch for {record.query_id}/{record.draw_id}")
         if record.backend_version != job["backend_version"]:
             errors.append(f"backend version mismatch for {record.query_id}/{record.draw_id}")
+        if record.structured_output_backend != job["structured_output_backend"]:
+            errors.append(
+                f"structured backend mismatch for {record.query_id}/{record.draw_id}"
+            )
+        if (
+            record.structured_output_backend_version
+            != job["structured_output_backend_version"]
+        ):
+            errors.append(
+                f"structured backend version mismatch for {record.query_id}/{record.draw_id}"
+            )
         if record.model_artifact_sha256 != model_artifact_sha256:
             errors.append(f"model artifact mismatch for {record.query_id}/{record.draw_id}")
         if record.prompt_path != job["prompt_path"] or record.prompt_sha256 != prompt_hash:
