@@ -7,6 +7,24 @@ cd "$repo_root"
 directory=artifacts/generations/compat
 mkdir -p "$directory"
 
+verify_compatibility() {
+  uv run python scripts/verify_generation_compatibility.py \
+    qwen-primary "$directory/qwen-primary-a.jsonl" "$directory/qwen-primary-b.jsonl" \
+    mistral-primary "$directory/mistral-primary-a.jsonl" "$directory/mistral-primary-b.jsonl" \
+    qwen-mugi "$directory/qwen-mugi-a.jsonl" "$directory/qwen-mugi-b.jsonl" \
+    qwen-query2doc "$directory/qwen-query2doc-a.jsonl" "$directory/qwen-query2doc-b.jsonl" \
+    qwen-hyde-generic "$directory/qwen-hyde-generic-a.jsonl" "$directory/qwen-hyde-generic-b.jsonl" \
+    qwen-hyde-fiqa "$directory/qwen-hyde-fiqa-a.jsonl" "$directory/qwen-hyde-fiqa-b.jsonl" \
+    qwen-hyde-arguana "$directory/qwen-hyde-arguana-a.jsonl" "$directory/qwen-hyde-arguana-b.jsonl" \
+    qwen-hyde-scifact "$directory/qwen-hyde-scifact-a.jsonl" "$directory/qwen-hyde-scifact-b.jsonl" \
+    qwen-hyde-trec-covid "$directory/qwen-hyde-trec-covid-a.jsonl" "$directory/qwen-hyde-trec-covid-b.jsonl"
+}
+
+if verify_compatibility >/dev/null 2>&1; then
+  echo "Generation compatibility artifacts already complete; verified and reused."
+  exit 0
+fi
+
 uv run hqc generate --dataset scifact --limit 8 \
   --prompt prompts/primary-reference-v1.txt \
   --output "$directory/qwen-primary-a.jsonl"
@@ -52,13 +70,4 @@ do
     --output "$directory/qwen-hyde-$label-b.jsonl"
 done
 
-uv run python scripts/verify_generation_compatibility.py \
-  qwen-primary "$directory/qwen-primary-a.jsonl" "$directory/qwen-primary-b.jsonl" \
-  mistral-primary "$directory/mistral-primary-a.jsonl" "$directory/mistral-primary-b.jsonl" \
-  qwen-mugi "$directory/qwen-mugi-a.jsonl" "$directory/qwen-mugi-b.jsonl" \
-  qwen-query2doc "$directory/qwen-query2doc-a.jsonl" "$directory/qwen-query2doc-b.jsonl" \
-  qwen-hyde-generic "$directory/qwen-hyde-generic-a.jsonl" "$directory/qwen-hyde-generic-b.jsonl" \
-  qwen-hyde-fiqa "$directory/qwen-hyde-fiqa-a.jsonl" "$directory/qwen-hyde-fiqa-b.jsonl" \
-  qwen-hyde-arguana "$directory/qwen-hyde-arguana-a.jsonl" "$directory/qwen-hyde-arguana-b.jsonl" \
-  qwen-hyde-scifact "$directory/qwen-hyde-scifact-a.jsonl" "$directory/qwen-hyde-scifact-b.jsonl" \
-  qwen-hyde-trec-covid "$directory/qwen-hyde-trec-covid-a.jsonl" "$directory/qwen-hyde-trec-covid-b.jsonl"
+verify_compatibility
