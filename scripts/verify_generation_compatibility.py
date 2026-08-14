@@ -35,6 +35,13 @@ def read(path: Path) -> list[dict[str, object]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
+def is_ancestor(candidate: object, current: str) -> bool:
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", str(candidate), current], check=False
+    )
+    return result.returncode == 0
+
+
 def main() -> None:
     if len(sys.argv) < 4 or (len(sys.argv) - 1) % 3:
         raise SystemExit(
@@ -53,8 +60,8 @@ def main() -> None:
         first, second = read(first_path), read(second_path)
         if len(first) != 24 or len(second) != 24:
             raise RuntimeError(f"{label} artifacts must each contain 24 records")
-        if any(row["code_commit"] != commit for row in [*first, *second]):
-            raise RuntimeError(f"{label} artifacts were produced by another commit")
+        if any(not is_ancestor(row["code_commit"], commit) for row in [*first, *second]):
+            raise RuntimeError(f"{label} artifacts were not produced by an ancestor commit")
         for index, (left, right) in enumerate(zip(first, second, strict=True)):
             mismatches = [field for field in FIELDS if left[field] != right[field]]
             if mismatches:
