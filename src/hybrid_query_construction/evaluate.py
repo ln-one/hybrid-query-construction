@@ -4,11 +4,11 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from .datasets import load_qrels
-from .fusion import complete_wrrf, fixed_top_l_wrrf
+from .fusion import fixed_top_l_wrrf
+from .fusion_cache import ALGORITHM, FusionReplayCache
 from .io import canonical_json, sha256_bytes, sha256_file, write_json
 from .metrics import ndcg_at_k, recall_at_k
 from .models import QueryResult
-from .replay import replay_complete_wrrf
 from .storage import RankingArtifact, RankingStore, ranking_store_digest
 
 CONTROLLED_METHODS = {
@@ -73,14 +73,17 @@ def _result(
     top_k: int,
     constant: int,
     method_config_sha256: str,
+    cache: FusionReplayCache,
 ) -> QueryResult:
-    fused = complete_wrrf((dense.ranking, sparse.ranking), top_k=top_k, constant=constant)
-    replay = replay_complete_wrrf(
-        dense.ranking, sparse.ranking, top_k=top_k, constant=constant, keep_trace=True
+    replay = cache.get_or_compute(
+        dense.ranking,
+        sparse.ranking,
+        dense_sha256=dense.ranking_sha256,
+        sparse_sha256=sparse.ranking_sha256,
+        top_k=top_k,
+        constant=constant,
     )
-    if list(replay.ordered_top_k) != fused:
-        raise AssertionError("replay result does not match complete fusion")
-    trace_sha = sha256_bytes(canonical_json(replay.trace).encode())
+    fused = list(replay.ordered_top_k)
     generation_sha = sha256_bytes(
         f"{dense.generation_sha256}\x1f{sparse.generation_sha256}".encode()
     )
@@ -105,7 +108,7 @@ def _result(
         dense_ranking_sha256=dense.ranking_sha256,
         sparse_ranking_sha256=sparse.ranking_sha256,
         method_config_sha256=method_config_sha256,
-        replay_trace_sha256=trace_sha,
+        replay_trace_sha256=replay.trace_sha256,
         fallback=dense.fallback or sparse.fallback,
     )
 
@@ -146,7 +149,11 @@ def evaluate_rankings(
     if result_track not in {"controlled", "ablation", "robustness", "scale"}:
         raise ValueError(f"unsupported result track: {result_track}")
 
-    with RankingStore(store_path, dataset, document_ids) as store:
+    cache_path = root / "artifacts" / "cache" / "fusion-replay.sqlite3"
+    with (
+        RankingStore(store_path, dataset, document_ids) as store,
+        FusionReplayCache(cache_path) as cache,
+    ):
         controlled_keys = list(store.keys())
         controlled_draws = sorted(
             {
@@ -188,6 +195,7 @@ def evaluate_rankings(
                     top_k=top_k,
                     constant=constant,
                     method_config_sha256=method_config_sha,
+                    cache=cache,
                 )
                 rows.append(result)
                 for top_l in fixed_top_l:
@@ -256,6 +264,7 @@ def evaluate_rankings(
                         top_k=top_k,
                         constant=constant,
                         method_config_sha256=method_config_sha,
+                        cache=cache,
                     )
                 )
 
@@ -287,6 +296,11 @@ def evaluate_rankings(
         "fixed_top_l_rows": len(fixed_rows),
         "qrels_sha256": sha256_file(qrels_path),
         "ranking_store_sha256": ranking_store_digest(store_path),
+        "fusion_replay_cache": {
+            "algorithm": ALGORITHM,
+            "hits": cache.hits,
+            "misses": cache.misses,
+        },
         "protocol_file_sha256": {
             str(path.relative_to(root)): sha256_file(path)
             for path in sorted((root / "configs").rglob("*.yaml"))

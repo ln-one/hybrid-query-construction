@@ -179,13 +179,8 @@ def _audit_generation_job(
         if record.backend_version != job["backend_version"]:
             errors.append(f"backend version mismatch for {record.query_id}/{record.draw_id}")
         if record.structured_output_backend != job["structured_output_backend"]:
-            errors.append(
-                f"structured backend mismatch for {record.query_id}/{record.draw_id}"
-            )
-        if (
-            record.structured_output_backend_version
-            != job["structured_output_backend_version"]
-        ):
+            errors.append(f"structured backend mismatch for {record.query_id}/{record.draw_id}")
+        if record.structured_output_backend_version != job["structured_output_backend_version"]:
             errors.append(
                 f"structured backend version mismatch for {record.query_id}/{record.draw_id}"
             )
@@ -276,6 +271,74 @@ def _read_ranking_keys(path: Path, dataset: str) -> set[tuple[str, int, str, str
         connection.close()
 
 
+def _ranking_reuse_errors(
+    root: Path,
+    store: Path,
+    spec_value: dict[str, Any],
+    manifest_value: dict[str, Any],
+) -> list[str]:
+    reuse = spec_value.get("ranking_reuse")
+    if reuse is None:
+        return []
+    errors: list[str] = []
+    source = root / str(reuse["source"])
+    if not source.exists():
+        return ["ranking reuse source is missing"]
+    if ranking_store_digest(source) != reuse.get("source_store_sha256"):
+        errors.append("ranking reuse source hash mismatch")
+    mode = str(reuse.get("mode"))
+    predicate = (
+        "source.track='base'"
+        if mode == "base"
+        else "source.channel LIKE 'sparse_%' AND source.track!='fidelity'"
+    )
+    if mode not in {"base", "sparse"}:
+        return [f"unsupported ranking reuse mode in specification: {mode}"]
+    connection = sqlite3.connect(store)
+    try:
+        connection.execute("ATTACH DATABASE ? AS reused_source", (str(source),))
+        source_documents = connection.execute(
+            "SELECT value FROM reused_source.metadata WHERE key='documents_sha256'"
+        ).fetchone()
+        target_documents = connection.execute(
+            "SELECT value FROM metadata WHERE key='documents_sha256'"
+        ).fetchone()
+        if source_documents != target_documents:
+            errors.append("ranking reuse document collection mismatch")
+        selected = int(
+            connection.execute(
+                f"SELECT COUNT(*) FROM reused_source.rankings AS source WHERE {predicate}"
+            ).fetchone()[0]
+        )
+        mismatches = int(
+            connection.execute(
+                f"""SELECT COUNT(*) FROM reused_source.rankings AS source
+                LEFT JOIN rankings AS target
+                ON target.dataset=source.dataset AND target.query_id=source.query_id
+                AND target.draw_id=source.draw_id AND target.track=source.track
+                AND target.channel=source.channel
+                AND target.reference_count=source.reference_count
+                WHERE {predicate} AND (
+                    target.ranking_sha256 IS NULL
+                    OR target.ranking_sha256!=source.ranking_sha256
+                    OR target.support!=source.support
+                    OR target.fallback!=source.fallback
+                    OR target.generation_sha256!=source.generation_sha256
+                )"""
+            ).fetchone()[0]
+        )
+    finally:
+        connection.close()
+    evidence = manifest_value.get("reuse_evidence") or {}
+    if int(evidence.get("selected", -1)) != selected:
+        errors.append("ranking reuse evidence count mismatch")
+    if int(evidence.get("ordinal_rows_verified", -1)) != selected:
+        errors.append("ranking reuse ordinal verification incomplete")
+    if mismatches:
+        errors.append(f"ranking reuse parity mismatch for {mismatches} rows")
+    return errors
+
+
 def _audit_ranking_job(
     *,
     root: Path,
@@ -305,18 +368,22 @@ def _audit_ranking_job(
             actual = _read_ranking_keys(store, dataset)
         except Exception as error:
             errors.append(f"unreadable ranking store: {error}")
+    spec_value: dict[str, Any] = {}
     if not spec.exists():
         errors.append("missing ranking specification")
     else:
-        value = json.loads(spec.read_text(encoding="utf-8"))
-        if not _is_ancestor(root, str(value.get("code_commit", "")), expected_commit):
+        spec_value = json.loads(spec.read_text(encoding="utf-8"))
+        if not _is_ancestor(root, str(spec_value.get("code_commit", "")), expected_commit):
             errors.append("ranking specification commit mismatch")
+    manifest_value: dict[str, Any] = {}
     if not manifest.exists():
         errors.append("missing ranking manifest")
     elif store.exists():
-        value = json.loads(manifest.read_text(encoding="utf-8"))
-        if value.get("ranking_store_sha256") != ranking_store_digest(store):
+        manifest_value = json.loads(manifest.read_text(encoding="utf-8"))
+        if manifest_value.get("ranking_store_sha256") != ranking_store_digest(store):
             errors.append("ranking store hash mismatch")
+    if store.exists() and spec_value and manifest_value:
+        errors.extend(_ranking_reuse_errors(root, store, spec_value, manifest_value))
     missing = expected - actual
     unexpected = actual - expected
     if missing:
@@ -331,6 +398,74 @@ def _audit_ranking_job(
         "complete": not errors,
         "errors": errors,
     }
+
+
+def ranking_progress(root: Path, dataset: str, run_id: str) -> dict[str, Any]:
+    query_ids = set(load_queries(root / "data" / "processed" / dataset / "queries.jsonl"))
+    controlled_queries = (
+        set(hash_selected(query_ids, 100)) if run_id == "mistral" else query_ids
+    )
+    result = _audit_ranking_job(
+        root=root,
+        dataset=dataset,
+        run_id=run_id,
+        controlled_queries=controlled_queries,
+        include_fidelity=run_id == "primary" and dataset in ALL_DATASETS,
+        expected_commit=current_commit(root),
+    )
+    if not result["complete"]:
+        raise RuntimeError(
+            f"ranking artifact is incomplete for {dataset}/{run_id}: {result['errors']}"
+        )
+    return result
+
+
+def generation_progress(root: Path, group: str) -> dict[str, Any]:
+    if group not in {"qwen", "robustness"}:
+        raise ValueError(f"unsupported generation group: {group}")
+    jobs = [
+        job
+        for job in _expected_generation_jobs(root)
+        if (job["family"] == "robustness") == (group == "robustness")
+    ]
+    commit = current_commit(root)
+    runtime_hash = sha256_file(root / "uv.lock")
+    model_artifacts: dict[str, tuple[str, str | None]] = {}
+    for job in jobs:
+        local_path = str(job["local_model_path"])
+        if local_path in model_artifacts:
+            continue
+        try:
+            manifest = verify_model_artifact(root / local_path)
+            model_artifacts[local_path] = (str(manifest["artifact_sha256"]), None)
+        except Exception as error:
+            model_artifacts[local_path] = ("", str(error))
+    results = [
+        _audit_generation_job(
+            root,
+            job,
+            commit,
+            runtime_hash,
+            *model_artifacts[str(job["local_model_path"])],
+        )
+        for job in jobs
+    ]
+    complete = all(result["complete"] for result in results)
+    summary = {
+        "group": group,
+        "complete": complete,
+        "actual": sum(int(result["actual"]) for result in results),
+        "expected": sum(int(result["expected"]) for result in results),
+        "jobs": results,
+    }
+    if not complete:
+        incomplete = [
+            f"{result['family']}:{result['dataset']}"
+            for result in results
+            if not result["complete"]
+        ]
+        raise RuntimeError(f"generation artifacts incomplete: {incomplete}")
+    return summary
 
 
 def formal_progress(root: Path, *, require_complete: bool = False) -> dict[str, Any]:

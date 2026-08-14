@@ -106,6 +106,11 @@ def verify_repository(root: Path) -> dict[str, object]:
     tiny = run_tiny(tiny_path)
     if tiny["ordered_top20"] != tiny["replay"]["ordered_top_k"]:
         errors.append("tiny replay parity failed")
+    if not all(
+        tiny["reuse"][key]
+        for key in ("itemwise_equal", "ranking_sha256_equal", "fusion_cache_hit")
+    ):
+        errors.append("tiny reuse parity failed")
     result = {
         "ok": not errors,
         "errors": errors,

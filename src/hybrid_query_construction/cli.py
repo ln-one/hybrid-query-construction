@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from .audit import formal_progress
+from .audit import formal_progress, generation_progress, ranking_progress
 from .datasets import (
     load_queries,
     prepare_beir_dataset,
@@ -97,6 +97,9 @@ def command_rank(args: argparse.Namespace) -> None:
             reference_counts=tuple(args.reference_counts),
             dense_key=args.dense_key,
             run_id=args.run_id,
+            reuse_store=optional_path(args.reuse_store),
+            reuse_mode=args.reuse_mode,
+            reuse_embeddings_from=args.reuse_embeddings_from,
         )
     )
 
@@ -167,6 +170,26 @@ def command_progress(args: argparse.Namespace) -> None:
     )
 
 
+def command_check_ranking(args: argparse.Namespace) -> None:
+    print(
+        json.dumps(
+            ranking_progress(repository_root(), args.dataset, args.run_id),
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+def command_check_generations(args: argparse.Namespace) -> None:
+    print(
+        json.dumps(
+            generation_progress(repository_root(), args.group),
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
 def command_prepare_model(args: argparse.Namespace) -> None:
     root = repository_root()
     config = yaml.safe_load((root / args.config).read_text(encoding="utf-8"))
@@ -222,6 +245,9 @@ def build_parser() -> argparse.ArgumentParser:
     rank.add_argument("--limit", type=int)
     rank.add_argument("--dense-key", default="dense")
     rank.add_argument("--run-id", default="primary")
+    rank.add_argument("--reuse-store")
+    rank.add_argument("--reuse-mode", choices=("none", "base", "sparse"), default="none")
+    rank.add_argument("--reuse-embeddings-from")
     rank.set_defaults(function=command_rank)
 
     evaluate = subparsers.add_parser("evaluate")
@@ -273,6 +299,15 @@ def build_parser() -> argparse.ArgumentParser:
     progress = subparsers.add_parser("progress")
     progress.add_argument("--require-complete", action="store_true")
     progress.set_defaults(function=command_progress)
+
+    check_ranking = subparsers.add_parser("check-ranking")
+    check_ranking.add_argument("--dataset", required=True)
+    check_ranking.add_argument("--run-id", default="primary")
+    check_ranking.set_defaults(function=command_check_ranking)
+
+    check_generations = subparsers.add_parser("check-generations")
+    check_generations.add_argument("--group", choices=("qwen", "robustness"), required=True)
+    check_generations.set_defaults(function=command_check_generations)
 
     prepare_model = subparsers.add_parser("prepare-model")
     prepare_model.add_argument("--config", default="configs/generators/formal-v1.yaml")

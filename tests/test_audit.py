@@ -18,10 +18,6 @@ def test_expected_ranking_keys_cover_all_registered_cells() -> None:
 
 def test_generation_commit_may_precede_current_head() -> None:
     root = Path(__file__).resolve().parents[1]
-    head = subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], cwd=root, text=True
-    ).strip()
-    parent = subprocess.check_output(
-        ["git", "rev-parse", "HEAD^"], cwd=root, text=True
-    ).strip()
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    parent = subprocess.check_output(["git", "rev-parse", "HEAD^"], cwd=root, text=True).strip()
     assert _is_ancestor(root, parent, head)

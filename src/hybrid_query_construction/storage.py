@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +25,16 @@ class RankingArtifact:
     fallback: bool
     generation_sha256: str
     ranking_sha256: str
+
+
+@dataclass(frozen=True)
+class RankingReuseEvidence:
+    source: str
+    selected: int
+    inserted: int
+    already_present: int
+    ordinal_rows_verified: int
+    selection_sha256: str
 
 
 class RankingStore:
@@ -220,14 +230,87 @@ class RankingStore:
         )
         yield from rows
 
+    def copy_verified_from(
+        self,
+        source_path: Path,
+        *,
+        select: Callable[[tuple[str, int, str, str, int]], bool],
+    ) -> RankingReuseEvidence:
+        """Reuse exact rankings after verifying collection and ordinal identity.
+
+        Rankings encode ordered document ordinals. Equal document metadata plus
+        equal decompressed ordinal bytes therefore proves itemwise rank parity.
+        Existing destination rows are never overwritten.
+        """
+        source = sqlite3.connect(f"file:{source_path}?mode=ro", uri=True)
+        selected = inserted = already_present = verified = 0
+        evidence: list[str] = []
+        try:
+            source_metadata = dict(source.execute("SELECT key, value FROM metadata").fetchall())
+            destination_metadata = dict(
+                self.connection.execute("SELECT key, value FROM metadata").fetchall()
+            )
+            for key in ("dataset", "documents_sha256", "documents_json"):
+                if source_metadata.get(key) != destination_metadata.get(key):
+                    raise RuntimeError(
+                        f"cannot reuse rankings with different {key}: {source_path}"
+                    )
+
+            rows = source.execute(
+                """SELECT dataset, query_id, draw_id, track, channel, reference_count,
+                ranking, support, fallback, generation_sha256, ranking_sha256
+                FROM rankings
+                ORDER BY query_id, draw_id, track, channel, reference_count"""
+            )
+            for row in rows:
+                key = (str(row[1]), int(row[2]), str(row[3]), str(row[4]), int(row[5]))
+                if not select(key):
+                    continue
+                selected += 1
+                raw = zstd.ZstdDecompressor().decompress(row[6])
+                if sha256_bytes(raw) != row[10]:
+                    raise RuntimeError(f"source ranking hash mismatch for {key}")
+                ordinals = np.frombuffer(raw, dtype="<u4")
+                if len(ordinals) and int(ordinals.max()) >= len(self.document_ids):
+                    raise RuntimeError(f"source ranking has invalid ordinal for {key}")
+                verified += 1
+
+                existing = self.connection.execute(
+                    """SELECT support, fallback, generation_sha256, ranking_sha256
+                    FROM rankings WHERE dataset=? AND query_id=? AND draw_id=?
+                    AND track=? AND channel=? AND reference_count=?""",
+                    (self.dataset, *key),
+                ).fetchone()
+                metadata = (int(row[7]), int(row[8]), str(row[9]), str(row[10]))
+                if existing is not None:
+                    if tuple(existing) != metadata:
+                        raise RuntimeError(f"existing ranking differs from reuse source: {key}")
+                    already_present += 1
+                else:
+                    self.connection.execute(
+                        """INSERT INTO rankings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        row,
+                    )
+                    inserted += 1
+                evidence.append(canonical_json((*key, *metadata)))
+            self.connection.commit()
+        finally:
+            source.close()
+        return RankingReuseEvidence(
+            source=str(source_path),
+            selected=selected,
+            inserted=inserted,
+            already_present=already_present,
+            ordinal_rows_verified=verified,
+            selection_sha256=sha256_bytes("\n".join(evidence).encode()),
+        )
+
 
 def ranking_store_digest(path: Path) -> str:
     """Hash logical ranking contents, independent of SQLite page layout."""
     connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     try:
-        metadata = connection.execute(
-            "SELECT key, value FROM metadata ORDER BY key"
-        ).fetchall()
+        metadata = connection.execute("SELECT key, value FROM metadata ORDER BY key").fetchall()
         rows = connection.execute(
             """SELECT dataset, query_id, draw_id, track, channel, reference_count,
             ranking, support, fallback, generation_sha256, ranking_sha256
