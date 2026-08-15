@@ -1,0 +1,3 @@
+comparison,classification,rule
+proposed_vs_bridge_shared,混合,四项有利差值的95%区间同向，否则为混合
+proposed_vs_original,强阳性,四项有利差值的95%区间同向，否则为混合

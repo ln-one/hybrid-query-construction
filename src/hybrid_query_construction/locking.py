@@ -9,6 +9,7 @@ from .io import sha256_file, write_json
 
 TRACKED_LOCK_PREFIXES = ("configs/", "prompts/", "src/", "scripts/", "plan/")
 HELDOUT_DATASETS = ("fiqa", "arguana", "webis-touche2020", "scidocs")
+POSTHELDOUT_MAINTENANCE = "plan/postheldout-maintenance-v1.json"
 
 
 def _git(root: Path, *arguments: str) -> str:
@@ -70,15 +71,89 @@ def create_preheldout_lock(root: Path, output: Path) -> dict[str, object]:
     return manifest
 
 
+def _approved_protocol_hashes(root: Path, lock_path: Path) -> dict[str, str]:
+    maintenance_path = root / POSTHELDOUT_MAINTENANCE
+    if not maintenance_path.exists():
+        return {}
+    maintenance = json.loads(maintenance_path.read_text(encoding="utf-8"))
+    if maintenance.get("schema_version") != 1:
+        raise RuntimeError("unsupported post-held-out maintenance schema")
+    if maintenance.get("preheldout_lock_sha256") != sha256_file(lock_path):
+        raise RuntimeError("post-held-out maintenance references a different lock")
+    approved = maintenance.get("approved_protocol_file_sha256", {})
+    if not isinstance(approved, dict) or not all(
+        isinstance(key, str) and isinstance(value, str)
+        for key, value in approved.items()
+    ):
+        raise RuntimeError("invalid approved protocol hashes in maintenance record")
+    return approved
+
+
+def _ranking_database_relative(relative: str) -> str | None:
+    if not relative.startswith("artifacts/rankings/"):
+        return None
+    if relative.endswith(".sqlite3"):
+        return relative
+    for suffix in (".sqlite3-wal", ".sqlite3-shm"):
+        if relative.endswith(suffix):
+            return relative[: -len(suffix)] + ".sqlite3"
+    return None
+
+
+def _ranking_manifest_relative(database_relative: str) -> str:
+    return database_relative.removesuffix(".sqlite3") + "-manifest.json"
+
+
+def _logical_ranking_store_matches(
+    root: Path,
+    relative: str,
+    locked_artifacts: dict[str, str],
+    verified_databases: dict[str, bool],
+) -> bool:
+    database_relative = _ranking_database_relative(relative)
+    if database_relative is None:
+        return False
+    if database_relative in verified_databases:
+        return verified_databases[database_relative]
+    manifest_relative = _ranking_manifest_relative(database_relative)
+    locked_manifest_sha = locked_artifacts.get(manifest_relative)
+    manifest_path = root / manifest_relative
+    database_path = root / database_relative
+    if (
+        locked_manifest_sha is None
+        or not manifest_path.exists()
+        or not database_path.exists()
+        or sha256_file(manifest_path) != locked_manifest_sha
+    ):
+        verified_databases[database_relative] = False
+        return False
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    expected = manifest.get("ranking_store_sha256")
+    if not isinstance(expected, str):
+        verified_databases[database_relative] = False
+        return False
+    from .storage import ranking_store_digest
+
+    matches = ranking_store_digest(database_path) == expected
+    verified_databases[database_relative] = matches
+    return matches
+
+
 def verify_lock(root: Path, lock_path: Path) -> None:
     manifest = json.loads(lock_path.read_text(encoding="utf-8"))
+    approved_protocol = _approved_protocol_hashes(root, lock_path)
     for relative, expected in manifest["tracked_protocol_files"].items():
         actual = sha256_file(root / relative)
-        if actual != expected:
+        if actual != expected and actual != approved_protocol.get(relative):
             raise RuntimeError(f"protocol file changed after lock: {relative}")
-    for relative, expected in manifest["pre_evaluation_artifacts"].items():
-        actual = sha256_file(root / relative)
-        if actual != expected:
+    locked_artifacts = manifest["pre_evaluation_artifacts"]
+    verified_databases: dict[str, bool] = {}
+    for relative, expected in locked_artifacts.items():
+        path = root / relative
+        actual = sha256_file(path) if path.exists() else None
+        if actual != expected and not _logical_ranking_store_matches(
+            root, relative, locked_artifacts, verified_databases
+        ):
             raise RuntimeError(f"artifact changed after lock: {relative}")
     for relative, expected in manifest.get("model_artifacts", {}).items():
         actual = sha256_file(root / relative)

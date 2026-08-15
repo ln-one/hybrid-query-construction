@@ -11,6 +11,7 @@ data/cache/
 data/raw/
 data/processed/
 artifacts/generations/**
+artifacts/cache/**
 artifacts/logs/**
 artifacts/lock/*.json
 artifacts/rankings/*
