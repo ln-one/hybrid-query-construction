@@ -63,6 +63,7 @@ def test_report_keeps_development_out_of_confirmatory_tables(tmp_path: Path) -> 
     access_intervals = pd.read_csv(output / "access-macro-bootstrap.csv")
     method_intervals = pd.read_csv(output / "main-macro-bootstrap.csv")
     classifications = pd.read_csv(output / "outcome-classification.csv")
+    report = (output / "REPORT.md").read_text(encoding="utf-8")
     assert set(main["dataset"]) == {"fiqa", "arguana", "webis-touche2020", "scidocs"}
     assert set(development["dataset"]) == {"scifact"}
     assert len(tests) == 8
@@ -83,6 +84,16 @@ def test_report_keeps_development_out_of_confirmatory_tables(tmp_path: Path) -> 
         "proposed_vs_bridge_shared",
     }
     assert set(classifications["classification"]) <= {"强阳性", "混合", "负面"}
+    for heading in (
+        "## Held-out 各数据集主结果",
+        "## 2×2 机制实验（数据集等权）",
+        "## 公开方法完整复现",
+        "## 消融与敏感性",
+        "## 鲁棒性：第二生成模型与第二 Dense 编码器",
+        "## 规模趋势",
+        "## 开发集机制检查（不用于 held-out 主结论）",
+    ):
+        assert heading in report
 
 
 def test_report_separates_conditions_and_holm_families(tmp_path: Path, monkeypatch) -> None:

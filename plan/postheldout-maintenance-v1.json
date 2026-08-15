@@ -1,9 +1,11 @@
 {
   "approved_protocol_file_sha256": {
-    "src/hybrid_query_construction/locking.py": "4b76f95664fd42a6bef19952ef33439583a768f05f346f53549274881bd3f9d2"
+    "plan/progress.md": "892418b00362619cf85eb8deb5ea91cd9d62cca84e2a7590459cf858e1fab841",
+    "src/hybrid_query_construction/locking.py": "4b76f95664fd42a6bef19952ef33439583a768f05f346f53549274881bd3f9d2",
+    "src/hybrid_query_construction/reporting.py": "43d8c8de52dcee8b21de0f09ce367b488752feec0e958baa2a7d3ca9ae7ea19b"
   },
   "frozen_experiment_commit": "ec605a35a22693b65ca98f7448ca2954ea6bcfed",
   "preheldout_lock_sha256": "74950b9c8103c1997581effc59e565ec1b92488d7f880a5aee4a44f48c9608df",
-  "reason": "Post-evaluation verifier maintenance: SQLite page, WAL, and SHM bytes may change when a frozen ranking store is opened. The verifier now accepts such physical changes only when the byte-locked sibling manifest is unchanged and its pre-evaluation logical ranking_store_sha256 still matches the complete current store.",
+  "reason": "Post-evaluation maintenance only. The verifier accepts SQLite physical layout changes only when the locked manifest and complete logical ranking digest still match. The report generator now renders the already-frozen robustness, scale, fidelity, ablation, fixed-Top-L, development, and negative-condition results in REPORT.md. The progress file now records the completed post-evaluation state. None of these changes alter generation, retrieval, fusion, replay, metrics, statistics, or any result record.",
   "schema_version": 1
 }

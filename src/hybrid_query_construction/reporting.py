@@ -391,6 +391,47 @@ def _plot_scale_trends(summary: pd.DataFrame, output: Path) -> None:
     plt.close(fig)
 
 
+def _markdown_or_empty(frame: pd.DataFrame, *, floatfmt: str = ".4f") -> str:
+    if frame.empty:
+        return "该实验轨道无记录。"
+    return frame.to_markdown(index=False, floatfmt=floatfmt)
+
+
+def _original_proposed_pairs(
+    frame: pd.DataFrame,
+    *,
+    group_columns: tuple[str, ...],
+) -> pd.DataFrame:
+    """Build compact, explicit Original--Proposed comparisons for the report."""
+    rows: list[dict[str, object]] = []
+    for group_key, data in frame.groupby(list(group_columns), sort=True):
+        key_values = group_key if isinstance(group_key, tuple) else (group_key,)
+        original = data[data["method"] == "original"]
+        proposed = data[data["method"] == "proposed"]
+        if len(original) != 1 or len(proposed) != 1:
+            continue
+        left = original.iloc[0]
+        right = proposed.iloc[0]
+        row: dict[str, object] = dict(zip(group_columns, key_values, strict=True))
+        row.update(
+            {
+                "original_ndcg": left["ndcg_at_10"],
+                "proposed_ndcg": right["ndcg_at_10"],
+                "delta_ndcg": right["ndcg_at_10"] - left["ndcg_at_10"],
+                "original_recall": left["recall_at_20"],
+                "proposed_recall": right["recall_at_20"],
+                "delta_recall": right["recall_at_20"] - left["recall_at_20"],
+                "dense_reduction_pct": 100.0
+                * (1.0 - right["dense_depth"] / left["dense_depth"]),
+                "sparse_reduction_pct": 100.0
+                * (1.0 - right["sparse_depth"] / left["sparse_depth"]),
+                "proposed_fallback_rate": right["fallback_rate"],
+            }
+        )
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def build_report(
     input_directory: Path, output_directory: Path, root: Path | None = None
 ) -> Path:
@@ -447,6 +488,7 @@ def build_report(
     classifications.to_csv(output_directory / "outcome-classification.csv", index=False)
     _plot_quality_access(heldout_main, output_directory / "quality-access.png")
 
+    fixed_summary = pd.DataFrame()
     fixed_rows = load_fixed_top_l_rows(input_directory)
     if fixed_rows:
         fixed_frame = pd.DataFrame(fixed_rows)
@@ -509,6 +551,141 @@ def build_report(
         .mean()
         .sort_values("method")
     )
+    main_dataset_table = heldout_main[
+        [
+            "dataset",
+            "method",
+            "ndcg_at_10",
+            "recall_at_20",
+            "dense_depth",
+            "sparse_depth",
+            "sparse_support",
+            "sparse_exhaustion_rate",
+            "fallback_rate",
+        ]
+    ].sort_values(["dataset", "method"])
+    mechanism_macro = macro[
+        macro["method"].isin(("original", "dense_only", "sparse_only", "proposed"))
+    ]
+
+    fidelity = summary[
+        summary["dataset"].isin(HELDOUT_DATASETS) & (summary["track"] == "fidelity")
+    ]
+    fidelity_macro = (
+        fidelity.groupby("method", as_index=False)[list(PRIMARY_METRICS)]
+        .mean()
+        .sort_values("method")
+    )
+    fidelity_macro.insert(0, "source", "published_prompt_and_integration")
+    own_complete_methods = macro[macro["method"].isin(("original", "proposed"))].copy()
+    own_complete_methods.insert(0, "source", "frozen_primary_protocol")
+    complete_method_comparison = pd.concat(
+        [own_complete_methods, fidelity_macro], ignore_index=True
+    )
+
+    reference_sensitivity = summary[
+        summary["dataset"].isin(HELDOUT_DATASETS)
+        & summary["track"].isin(("controlled", "ablation"))
+        & (summary["condition_id"] == "primary")
+        & (summary["method"] == "proposed")
+        & (summary["rrf_constant"] == 60)
+        & summary["reference_count"].isin((1, 3, 5))
+    ]
+    reference_macro = (
+        reference_sensitivity.groupby("reference_count", as_index=False)[
+            list(PRIMARY_METRICS)
+        ]
+        .mean()
+        .sort_values("reference_count")
+    )
+
+    rrf_sensitivity = summary[
+        summary["dataset"].isin(HELDOUT_DATASETS)
+        & summary["track"].isin(("controlled", "ablation"))
+        & (summary["condition_id"] == "primary")
+        & (summary["method"] == "proposed")
+        & (summary["reference_count"] == 5)
+        & summary["rrf_constant"].isin((2, 20, 60, 100))
+    ]
+    rrf_macro = (
+        rrf_sensitivity.groupby("rrf_constant", as_index=False)[list(PRIMARY_METRICS)]
+        .mean()
+        .sort_values("rrf_constant")
+    )
+
+    sparse_operator_macro = macro[
+        macro["method"].isin(
+            ("proposed", "sparse_boolean_mask", "sparse_references_only")
+        )
+    ]
+
+    fixed_macro = pd.DataFrame()
+    if not fixed_summary.empty:
+        fixed_macro = (
+            fixed_summary[
+                fixed_summary["dataset"].isin(HELDOUT_DATASETS)
+                & (fixed_summary["condition_id"] == "primary")
+                & (fixed_summary["reference_count"] == 5)
+                & (fixed_summary["rrf_constant"] == 60)
+                & fixed_summary["method"].isin(
+                    ("original", "bridge_shared", "proposed")
+                )
+            ]
+            .groupby(["method", "top_l"], as_index=False)[
+                ["ndcg_at_10", "recall_at_20", "complete_top20_exact_rate"]
+            ]
+            .mean()
+            .sort_values(["method", "top_l"])
+        )
+
+    robustness = summary[
+        summary["dataset"].isin(HELDOUT_DATASETS)
+        & (summary["track"] == "robustness")
+        & summary["method"].isin(("original", "proposed"))
+    ]
+    robustness_pairs = _original_proposed_pairs(
+        robustness, group_columns=("condition_id", "dataset")
+    )
+    negative_robustness = robustness_pairs[
+        (robustness_pairs["dense_reduction_pct"] < 0.0)
+        | (robustness_pairs["sparse_reduction_pct"] < 0.0)
+    ] if not robustness_pairs.empty else robustness_pairs
+    if negative_robustness.empty:
+        negative_robustness_text = "未观察到 Proposed 相对 Original 的访问深度恶化。"
+    else:
+        cells = [
+            (
+                f"{row.condition_id}/{row.dataset}：Dense {row.dense_reduction_pct:.2f}%，"
+                f"Sparse {row.sparse_reduction_pct:.2f}%"
+            )
+            for row in negative_robustness.itertuples(index=False)
+        ]
+        negative_robustness_text = (
+            "以下条件出现访问深度恶化（负百分比表示读取更多）：" + "；".join(cells) + "。"
+        )
+
+    scale = summary[
+        (summary["track"] == "scale")
+        & summary["method"].isin(("original", "proposed"))
+    ]
+    scale_pairs = _original_proposed_pairs(scale, group_columns=("dataset",))
+    if not scale_pairs.empty:
+        scale_pairs.insert(
+            1,
+            "documents",
+            scale_pairs["dataset"].str.rsplit("-", n=1).str[-1].astype(int),
+        )
+        scale_pairs = scale_pairs.sort_values("documents")
+
+    development = summary[
+        summary["dataset"].isin(DEVELOPMENT_DATASETS)
+        & (summary["track"] == "controlled")
+        & (summary["condition_id"] == "primary")
+        & (summary["reference_count"] == 5)
+        & (summary["rrf_constant"] == 60)
+        & summary["method"].isin(("original", "proposed"))
+    ]
+    development_pairs = _original_proposed_pairs(development, group_columns=("dataset",))
     unique_queries = query_means[["dataset", "query_id"]].drop_duplicates().shape[0]
     lines = [
         "# 正式实验结果报告",
@@ -517,7 +694,7 @@ def build_report(
         "",
         "## 数据完整性",
         "",
-        f"- 逐查询×生成记录：{len(frame):,} 条",
+        f"- 逐查询×方法×生成重复结果：{len(frame):,} 条",
         f"- 独立查询单元：{unique_queries:,} 条",
         f"- 数据集：{frame['dataset'].nunique()} 个",
         f"- 方法：{frame['method'].nunique()} 个",
@@ -530,6 +707,14 @@ def build_report(
         "### 主结果的查询级分层 bootstrap 95% 区间",
         "",
         method_intervals.to_markdown(index=False, floatfmt=".4f"),
+        "",
+        "## Held-out 各数据集主结果",
+        "",
+        _markdown_or_empty(main_dataset_table),
+        "",
+        "## 2×2 机制实验（数据集等权）",
+        "",
+        _markdown_or_empty(mechanism_macro),
         "",
         "## 相对 Original 的访问变化",
         "",
@@ -546,6 +731,48 @@ def build_report(
         "### 结论分类",
         "",
         classifications.to_markdown(index=False),
+        "",
+        "## 公开方法完整复现",
+        "",
+        (
+            "下表将各论文对应的提示词与整合规则同冻结的 Original 和 Proposed "
+            "并列展示；该表为描述性完整方法比较，预注册显著性检验仍只针对 "
+            "controlled 主比较。"
+        ),
+        "",
+        _markdown_or_empty(complete_method_comparison),
+        "",
+        "## 消融与敏感性",
+        "",
+        "### 参考文本数量",
+        "",
+        _markdown_or_empty(reference_macro),
+        "",
+        "### Sparse 算子",
+        "",
+        _markdown_or_empty(sparse_operator_macro),
+        "",
+        "### RRF 常数",
+        "",
+        _markdown_or_empty(rrf_macro),
+        "",
+        "### 固定 Top-L",
+        "",
+        _markdown_or_empty(fixed_macro),
+        "",
+        "## 鲁棒性：第二生成模型与第二 Dense 编码器",
+        "",
+        _markdown_or_empty(robustness_pairs),
+        "",
+        negative_robustness_text,
+        "",
+        "## 规模趋势",
+        "",
+        _markdown_or_empty(scale_pairs),
+        "",
+        "## 开发集机制检查（不用于 held-out 主结论）",
+        "",
+        _markdown_or_empty(development_pairs),
         "",
         "## 生成成本",
         "",

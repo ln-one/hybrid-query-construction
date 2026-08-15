@@ -1,20 +1,25 @@
 # Progress
 
-Current stage: S3 Experiments.
+Current stage: S5 Complete (post-held-out status record).
+
+The experiment protocol itself remains frozen at commit
+`ec605a35a22693b65ca98f7448ca2954ea6bcfed`. This file records completion after
+evaluation; it does not amend any model, method, dataset, ranking, replay, metric, or
+statistical decision.
 
 ## Stage status
 
 - [x] Scope and protocol decisions recorded.
-- [ ] D0 experiment protocol locked.
+- [x] D0 experiment protocol locked.
 - [x] D1 method--experiment traceability drafted and mechanically testable.
 - [x] D2 table and figure contracts drafted.
 - [x] Independent implementation passes tiny fixture.
-- [ ] Development validation passes.
-- [ ] Pre-held-out lock written.
-- [ ] Held-out generation and retrieval complete.
-- [ ] Evaluation and robustness analyses complete.
-- [ ] Clean-room verification complete.
-- [ ] Chinese report complete.
+- [x] Development validation passes.
+- [x] Pre-held-out lock written with held-out qrels absent.
+- [x] Held-out generation and retrieval complete.
+- [x] Evaluation, ablation, robustness, fidelity, fixed-Top-L, and scale analyses complete.
+- [x] Clean-room verification reproduces the report directory byte for byte.
+- [x] Chinese report complete, including mixed and negative conditions.
 
 ## Capability-use audit
 
@@ -24,9 +29,11 @@ Current stage: S3 Experiments.
   paper-orchestration, verification.
 - Inputs consumed: author-approved formal experiment plan and local pilot provenance.
 - Inputs not used: private production code is excluded by design.
-- Artifacts produced: private repository, frozen configuration schema, strict
-  generation records, independent Dense/Sparse construction, compact full-ranking
-  store, complete WRRF, stopping-depth replay, per-query evaluator, reporting shell.
-- Verification run: 18 tests, lint, repository verifier and tiny end-to-end fixture
-  passed before the formal runner was added; the expanded suite is rerun at each gate.
-- Remaining risk: long local 7B generation and exact-ranking runtime.
+- Artifacts produced: private repository, frozen configuration schema, 46,359 strict
+  generation records, 19 complete-ranking stores, 665,376 query-result records,
+  complete WRRF, stopping-depth replay, aggregate CSV files, figures, and `REPORT.md`.
+- Verification run: 45 tests, lint, lock verification, full artifact/privacy audit,
+  tiny end-to-end and reuse fixture, and a fresh `uv.lock` environment rebuild passed.
+- Reported boundary: logical access depth is not wall-clock latency. The report keeps
+  the mixed comparison against Bridge Shared and the negative Contriever/Touché access
+  condition instead of hiding them behind the aggregate result.
