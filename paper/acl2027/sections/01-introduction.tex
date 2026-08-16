@@ -1,63 +1,64 @@
 \section{Introduction}
 \label{sec:introduction}
 
-LLM-based query expansion has become a common approach to improving retrieval
-effectiveness \citep{gao-etal-2023-precise,wang-etal-2023-query2doc,zhang-etal-2024-exploring-best}.
-For hybrid retrieval, its gains are typically measured at a preset top-$L$
-cutoff using metrics such as nDCG and recall
-\citep{zhang-etal-2024-exploring-best,liu-zhang-2025-exp4fuse}.
-Recent work on fixed top-$L$ fusion shows that $L$ does more than control access
-depth: changing the cutoff can also change which candidates and cross-channel
-contributions enter the fused ranking \citep{zhang2026exact}.
-Consequently, a gain observed at one $L$ reflects both the query expansion and
-the chosen cutoff; at another $L$, its magnitude---and even the ordering between
-methods---may change. Evidence from a single cutoff therefore does not isolate
-the effect of query expansion.
+Existing LLM-based query expansion methods augment the original query with
+generated content and typically evaluate retrieval gains at a preset top-$L$
+cutoff
+\citep{gao-etal-2023-precise,wang-etal-2023-query2doc,zhang-etal-2024-exploring-best,liu-zhang-2025-exp4fuse}.
+In hybrid retrieval, however, top-$L$ jointly determines how much of each
+ranking is read and which documents contribute to fusion; changing $L$ may
+therefore change the fused result itself \citep{zhang2026exact}. A gain measured
+at a single cutoff is thus conditional on $L$ and does not isolate the effect
+of query expansion.
 
-To remove this confound, we evaluate the retrieval effectiveness of each query
-construction using complete-list fusion, without truncating either channel
-\citep{zhang2026exact}. We then reveal the dense and sparse rankings
-progressively and record the per-channel depths at which the same ordered
-top-$K$ becomes fixed. This separates two questions: what fused ranking does an
-expansion produce, and how much ranked evidence is required to determine it?
-The answers need not move together. An expansion may improve retrieval
-effectiveness while pushing decisive evidence deeper into one channel. We
-therefore ask whether query expansion can improve effectiveness without
-increasing the access depth of either channel.
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/fig_desa_intuition.pdf}
+  \caption{FiQA examples of DESA. Dense expansion recovers missing document
+  semantics; sparse anchoring promotes jointly supported passages and excludes
+  expansion-only matches. Ranks are channel ranks.}
+  \label{fig:desa-intuition}
+\end{figure}
 
-Meeting both goals requires treating dense and sparse retrieval differently.
-Prior studies show that expansion gains vary across retrievers, and that dense
-and sparse retrieval can favor different forms of generated evidence
-\citep{weller-etal-2024-generative,li-etal-2026-dvcqr}. Our NFCorpus analysis
-shows what happens when one shared expansion is applied to both channels. When
-the same generated passages are used in both channels, retrieval effectiveness
-improves and fewer dense ranks are needed to determine the fused result, yet
-more sparse ranks are required. The unexpanded sparse query matches only a
-small portion of the corpus; the added terms make far more documents eligible
-for sparse ranking, so the list no longer exhausts early. The same generated
-content therefore supplies useful semantic evidence to the dense retriever
-while spreading lexical evidence across a much larger sparse list. A shared
-expansion cannot control these two effects separately.
+To separate these factors, we first determine the fused result of each query
+construction from the complete dense and sparse rankings
+\citep{zhang2026exact}. A fixed sound replay procedure then reveals the two
+rankings progressively and records the per-channel depths at which the same
+ordered top-$K$ is certified. This separates two questions: what fused result
+does an expansion produce, and how much ranked evidence is required to
+determine it? The answers need not move together. An expansion may improve
+retrieval effectiveness while pushing decisive evidence deeper into one
+channel. We therefore ask whether query expansion can improve effectiveness
+while reducing the access depth required from both channels.
 
-We address this asymmetry with channel-asymmetric query expansion. The LLM
-generates several complementary reference passages around the original query.
-For dense retrieval, orthogonal residual expansion preserves the original query
-direction and adds only the new semantic component supplied by the references.
-For sparse retrieval, score-product anchoring multiplies each document's scores
-under the unexpanded and expanded queries. Documents matched only by generated
-terms receive no anchored score, while the new terms can still reorder
-documents supported by the original query. Together, these operations broaden
-semantic coverage without broadening sparse support: Dense expands; sparse
-anchors.
+Expansion effects are retriever-dependent
+\citep{weller-etal-2024-generative,li-etal-2026-dvcqr}. On NFCorpus, applying
+the same expansion to both channels improves the fused result and reduces dense
+access depth, but increases sparse access depth. Generated terms substantially
+enlarge the set of documents with nonzero sparse scores, preventing the sparse
+ranking from exhausting as early as it does for the original query. This
+reversal motivates an asymmetric design: dense retrieval should absorb new
+semantic evidence, whereas sparse retrieval should restrict it to documents
+already supported by the original query.
 
-The evaluation mirrors this argument. A top-$L$ sensitivity study first
-examines whether the measured gains and relative ranking of query expansion
-methods change with the cutoff. We then evaluate complete-list fusion on seven
-public retrieval benchmarks, comparing our method with the unexpanded query,
-shared expansion, and representative generative expansion methods in terms of
-retrieval effectiveness and per-channel access depth. Controlled experiments
-examine the contributions of complementary reference generation, orthogonal
-residual expansion, and score-product anchoring, followed by robustness
-analyses across generation and retrieval settings. Together, these experiments
-test whether channel-asymmetric query expansion can produce better fused
-rankings while reducing the access required from both channels.
+We address this asymmetry with DESA (Dense Expansion and Sparse Anchoring), a
+channel-asymmetric query expansion method for hybrid retrieval. Given an
+original query, the LLM generates several complementary reference passages
+around the same information need. For dense retrieval, orthogonal residual
+expansion preserves the original query direction and adds only the new semantic
+component supplied by the references. For sparse retrieval, score-product
+anchoring multiplies each document's scores under the original and expanded
+queries. Documents matched only by generated terms receive no anchored score,
+while the new terms may still reorder documents supported by the original
+query. Together, these operations broaden dense semantic coverage without
+broadening sparse support: Dense expands; sparse anchors.
+Figure~\ref{fig:desa-intuition} illustrates this division of labor through two
+retrieval examples.
+
+Across seven public retrieval benchmarks, DESA improves equal-dataset macro
+nDCG@10 and Recall@20 over the unexpanded query by 3.82\% and 2.38\%, while
+reducing dense and sparse exact-access depths by 36.90\% and 36.56\%,
+respectively. With equal dataset weighting, 63.31\% of queries become shallower
+in both channels. Mechanism experiments show that sparse anchoring contributes
+most of the effectiveness gain, while the dense orthogonal residual further
+reduces the ranked evidence required to determine the fused result.
