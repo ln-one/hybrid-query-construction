@@ -1,10 +1,10 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite the archived release."
-title: "Hybrid Query Construction"
+message: "If you use this software, please cite this repository and the accompanying paper."
+title: "DESA: Dense Expansion and Sparse Anchoring"
 type: software
 version: 0.1.0
 license: Apache-2.0
 authors:
-  - name: Anonymous
+  - family-names: Zhang
+    given-names: Chunran
 repository-code: "https://github.com/ln-one/hybrid-query-construction"
-

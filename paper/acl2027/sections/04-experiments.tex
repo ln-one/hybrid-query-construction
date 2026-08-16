@@ -1,9 +1,9 @@
 \section{Experiments}
 \label{sec:experiments}
 
-We first examine whether a fixed Top-$L$ cutoff changes the measured effect of
-query expansion. We then evaluate whether DESA improves retrieval quality while
-reducing the ranking depth required from Dense and Sparse retrieval. The
+We first examine whether a fixed top-$L$ cutoff changes the measured effect of
+query expansion. We then evaluate whether DESA improves retrieval effectiveness while
+reducing the ranking depth required from dense and sparse retrieval. The
 remaining experiments separate the contributions of the two channel operators
 and test robustness across generators, dense encoders, reference counts, and
 corpus sizes.
@@ -11,12 +11,12 @@ corpus sizes.
 \subsection{Evaluation Protocol}
 
 To measure cutoff sensitivity, we vary
-$L\in\{10,20,50,100,200,500,1000\}$. At each cutoff, the Top-$L$ Dense and
-Sparse rankings are fused using equal-weight RRF. We compute nDCG@10 and
-Recall@20, compare the ordering of query constructions across cutoff depths,
-and measure whether each fixed-$L$ result reproduces the ordered Top-20 from
-complete-list fusion
-\citep{jarvelin-kekalainen-2002-cumulated,cormack-etal-2009-rrf}.
+$L\in\{10,20,50,100,200,500,1000\}$. At each cutoff, the top-$L$ dense and
+sparse rankings are fused using equal-weight RRF
+\citep{cormack-etal-2009-rrf}. We compute nDCG@10
+\citep{jarvelin-kekalainen-2002-cumulated} and Recall@20, compare the ordering
+of query constructions across cutoff depths, and measure whether each fixed-$L$
+result reproduces the ordered top-20 from complete-list fusion.
 
 We also examine whether the cutoff changes the judgment of an expansion
 relative to the unexpanded query. For each query and generation draw, the
@@ -26,15 +26,15 @@ label changes and separately count strict reversals, where a gain becomes a
 loss or vice versa.
 
 All remaining experiments use the complete-list fusion defined in
-Section~\ref{sec:quality-access}. Retrieval quality is measured by nDCG@10 and
-Recall@20. Channel access is measured by the Dense and Sparse replay stopping
+Section~\ref{sec:quality-access}. Retrieval effectiveness is measured by nDCG@10 and
+Recall@20. Channel access is measured by the dense and sparse replay stopping
 depths $(L_D,L_S)$. We report their changes from Original and the proportion of
 queries for which both depths decrease. Sparse support size and exhaustion rate
 are used to explain changes in lexical access.
 
 \subsection{Datasets and Retrieval Setup}
 
-We evaluate on seven English BEIR collections: SciFact
+We evaluate on seven English BEIR datasets \citep{thakur-etal-2021-beir}: SciFact
 \citep{wadden-etal-2020-fact}, NFCorpus \citep{boteva-etal-2016-fulltext},
 TREC-COVID \citep{voorhees-etal-2020-trec-covid}, FiQA
 \citep{maia-etal-2018-fiqa}, ArguAna \citep{wachsmuth-etal-2018-retrieval},
@@ -57,11 +57,11 @@ robustness experiment uses Mistral-7B-Instruct-v0.3
 \citep{jiang-etal-2023-mistral} on up to 100 queries selected by a fixed hash
 from FiQA, ArguAna, Touch\'e-2020, and SCIDOCS.
 
-Dense retrieval uses BGE-small-en-v1.5 \citep{xiao-etal-2023-cpack}, with
+Dense retrieval uses BGE-small-en-v1.5 \citep{xiao-etal-2024-cpack}, with
 normalized query and document vectors ranked by dot product. Sparse retrieval
 uses Lucene BM25 through Pyserini 2.3.0, with $k_1=0.9$ and $b=0.4$
 \citep{robertson-zaragoza-2009-bm25,lin-etal-2021-pyserini}. Contriever
-\citep{izacard-etal-2022-contriever} is used as a second Dense encoder. Score
+\citep{izacard-etal-2022-contriever} is used as a second dense encoder. Score
 ties are broken by document identifier.
 
 \subsection{Comparison Methods}
@@ -69,48 +69,47 @@ ties are broken by document identifier.
 The controlled comparison includes Original and Shared expansion. Original
 submits the unexpanded query to both retrieval channels. Shared expansion uses
 the same generated references as DESA but applies them directly to both
-channels: Dense retrieval averages the representations of the five query and
-reference pairs, while Sparse retrieval concatenates the original query and all
+channels: dense retrieval averages the representations of the five query and
+reference pairs, while sparse retrieval concatenates the original query and all
 references. The comparison between Shared expansion and DESA therefore tests
-whether Dense and Sparse benefit from different integration rules.
+whether dense and sparse retrieval benefit from different integration rules.
 
 We also compare with three representative generative expansion methods. HyDE
-encodes generated hypothetical documents for Dense retrieval
+encodes generated hypothetical documents for dense retrieval
 \citep{gao-etal-2023-precise}. Query2doc appends a generated pseudo-document to
 the query \citep{wang-etal-2023-query2doc}. MuGI generates multiple references,
-pools their contextualized Dense representations, and uses query-weighted
-concatenation for Sparse retrieval \citep{zhang-etal-2024-exploring-best}.
-Since all three reproduced pipelines are available on FiQA, ArguAna,
-Touch\'e-2020, and SCIDOCS, the full-method comparison uses this common
-four-dataset subset.
+pools their contextualized dense representations, and uses query-weighted
+concatenation for sparse retrieval \citep{zhang-etal-2024-exploring-best}.
+We evaluate all three reproduced pipelines on the same seven datasets as DESA.
 
 We further compare with the rank-based QuDAR-simple variant, which uses the
-same generated references and fuses the Top-1000 OS, ES, OD, and ED rankings
+same generated references and fuses the top-1000 original-sparse (OS),
+expanded-sparse (ES), original-dense (OD), and expanded-dense (ED) rankings
 with RRF ($k=60$) \citep{kim-etal-2026-qudar}.
 
 \subsection{Mechanism and Robustness Analysis}
 
-We isolate the two channel operators with matched controls. For Dense
-retrieval, the original Sparse ranking is paired with either unprojected
-contextual expansion or orthogonal residual expansion. For Sparse retrieval,
-the original Dense ranking is paired with either direct rewriting or
+We isolate the two channel operators with matched controls. For dense
+retrieval, the original sparse ranking is paired with either unprojected
+contextual expansion or orthogonal residual expansion. For sparse retrieval,
+the original dense ranking is paired with either direct rewriting or
 score-product anchoring. A $2\times2$ comparison further evaluates Original,
 each proposed operator alone, and their combination.
 
 We then examine how each operator changes its retrieval channel. Dense behavior
 is measured by the angle between the original and expanded query vectors.
-Sparse behavior is measured by Top-20 turnover and by whether relevant
+Sparse behavior is measured by top-20 turnover and by whether relevant
 documents move upward in the ranking. We compare these quantities with the
-corresponding changes in retrieval quality and access depth using
+corresponding changes in retrieval effectiveness and access depth using
 within-dataset quartiles and Spearman correlations.
 
 Additional experiments vary the number of reference passages over
 $\{1,3,5\}$. Score-product anchoring is compared with a binary mask that
 retains expanded-query scores only for documents matched by the original
 query, separating support preservation from the use of graded original scores.
-We also test Sparse retrieval using only the generated passages. Robustness
+We also test sparse retrieval using only the generated passages. Robustness
 experiments vary the RRF constant over $\{2,20,60,100\}$, replace the generator
-and Dense encoder, and evaluate the nested TREC-COVID corpora.
+and dense encoder, and evaluate the nested TREC-COVID corpora.
 
 \subsection{Statistical Analysis}
 
@@ -119,7 +118,7 @@ We report results for each dataset and equal-dataset macro averages. The 95\%
 confidence intervals are obtained from 10,000 stratified bootstrap samples,
 with queries resampled within each dataset.
 
-The prespecified primary comparisons are DESA against Original and DESA
+The primary comparisons are DESA against Original and DESA
 against Shared expansion. We use 10,000 stratified paired sign-flip
 randomizations and apply Holm correction across nDCG@10, Recall@20, $L_D$, and
 $L_S$ separately for each comparator. The operator controls and the matched

@@ -4,7 +4,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-
 COLORS = {
     "original": "#9AA3AD",
     "shared": "#90C8F8",
@@ -34,6 +33,8 @@ def apply_style() -> None:
         {
             "font.family": "serif",
             "font.serif": ["Times New Roman", "Nimbus Roman", "STIXGeneral", "DejaVu Serif"],
+            "pdf.fonttype": 42,
+            "ps.fonttype": 42,
             "mathtext.fontset": "stix",
             "font.size": 7.5,
             "axes.titlesize": 8.3,

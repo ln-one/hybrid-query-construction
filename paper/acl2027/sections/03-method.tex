@@ -8,20 +8,20 @@ reference passages $R=\{r_1,\ldots,r_n\}$. Dense retrieval keeps the original
 query as its base direction and adds only the new semantic component supplied
 by the references. Sparse retrieval combines the original and expanded scores
 so that generated terms can reorder documents already matched by the original
-query without introducing expansion-only matches. The resulting Dense and
-Sparse rankings are fused into the final result. Figure~\ref{fig:desa-overview}
+query without introducing expansion-only matches. The resulting dense and
+sparse rankings are fused into the final result. Figure~\ref{fig:desa-overview}
 summarizes this design: Dense expands; Sparse anchors.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\columnwidth]{figures/fig_desa_overview.pdf}
-  \caption{Design principle of DESA. The same generated evidence expands
-  Dense semantics but remains anchored to the original query's lexical support
-  in Sparse retrieval.}
+  \caption{Design principle of DESA. The same generated passages expand dense
+  semantic coverage but remain anchored to the original query's lexical
+  support in sparse retrieval.}
   \label{fig:desa-overview}
 \end{figure}
 
-\subsection{Complementary Evidence Generation}
+\subsection{Complementary Reference Generation}
 
 The generator is prompted to produce $n$ short passages that could plausibly
 occur in relevant documents. Each passage introduces a different alias,
@@ -29,14 +29,14 @@ technical term, or paraphrase while retaining the entities, relations,
 numbers, polarity, temporal conditions, scope, and other constraints of
 $q_o$. The prompt prohibits broader information needs and invented answers.
 The passages therefore vary in expression rather than intent, allowing the
-two retrieval channels to draw additional evidence from a shared expansion.
+two retrieval channels to draw additional cues from a shared expansion.
 The complete prompt and decoding settings are provided in Appendix~A.
 
 \subsection{Channel-Asymmetric Query Construction}
 
 \subsubsection{Orthogonal Residual Expansion}
 
-Let $f_D$ be the Dense encoder. We encode the original query and each
+Let $f_D$ be the dense encoder. We encode the original query and each
 query--reference pair as unit vectors:
 
 \[
@@ -60,7 +60,7 @@ removed, and the remaining residual is added to $\mathbf v_o$:
 \]
 
 Documents are ranked by their similarity to $\mathbf e_D$, producing the
-Dense ranking $\pi_D$. Because $\mathbf z\perp\mathbf v_o$ and
+dense ranking $\pi_D$. Because $\mathbf z\perp\mathbf v_o$ and
 $\|\mathbf z\|\leq1$,
 
 \[
@@ -75,14 +75,14 @@ they contribute no orthogonal component, then $\mathbf e_D=\mathbf v_o$.
 
 \subsubsection{Score-Product Anchoring}
 
-For Sparse retrieval, the expanded query concatenates the original query and
+For sparse retrieval, the expanded query concatenates the original query and
 all reference passages:
 
 \[
 q_r=\operatorname{concat}(q_o,r_1,\ldots,r_n).
 \]
 
-Let $s_S(q,d)$ be a non-negative additive Sparse scorer. Each document $d$
+Let $s_S(q,d)$ be a non-negative additive sparse scorer. Each document $d$
 receives an original score, an expanded score, and their product:
 
 \[
@@ -102,18 +102,20 @@ is also supported by the expanded query. Hence,
 =\operatorname{supp}(s_o).
 \]
 
-Sorting the positive anchored scores produces the Sparse ranking $\pi_S$.
+Sorting the positive anchored scores produces the sparse ranking $\pi_S$.
 Generated terms may promote or demote documents within the original support,
 but documents matched only by the expansion receive zero anchored score and
 are excluded. If $s_r$ is merely a positive multiple of $s_o$, the original
-Sparse order is unchanged; positive global score rescaling also leaves the
+sparse order is unchanged; positive global score rescaling also leaves the
 ranking invariant.
 
 \subsection{Complete Fusion and Access Measurement}
 \label{sec:quality-access}
 
-We fuse the complete Dense and Sparse rankings using equal-weight reciprocal
-rank fusion \citep{cormack-etal-2009-rrf}:
+We use the complete-list target and bound-based replay of
+\citet{zhang2026exact}; DESA changes the query construction, not this evaluation
+protocol. Complete dense and sparse rankings are fused by equal-weight RRF
+\citep{cormack-etal-2009-rrf}:
 
 \[
 F(d)=
@@ -134,7 +136,6 @@ u_c(L_c)=\frac{1}{\kappa+L_c+1}.
 \]
 
 The replay reads from the channel with the larger bound, breaking ties in
-favor of Dense, until the membership and order of $T_K$ can no longer be
-changed by unread documents. It then records the Dense and Sparse depths
-$(L_D,L_S)$, which quantify how much ranked evidence each channel must reveal
-to determine the complete-list result.
+favor of the dense channel, until unread documents can no longer change the
+membership or order of $T_K$. It records the replay stopping depths
+$(L_D,L_S)$ required to determine the complete-list result.

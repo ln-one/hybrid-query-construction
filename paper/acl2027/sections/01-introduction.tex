@@ -1,9 +1,9 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Existing LLM-based query expansion methods augment the original query with
-generated content and typically evaluate retrieval gains at a preset top-$L$
-cutoff
+Existing LLM-based query expansion methods use generated content to construct
+retrieval queries or representations and typically evaluate retrieval gains at
+a preset top-$L$ cutoff
 \citep{gao-etal-2023-precise,wang-etal-2023-query2doc,zhang-etal-2024-exploring-best,liu-zhang-2025-exp4fuse}.
 In hybrid retrieval, however, top-$L$ jointly determines how much of each
 ranking is read and which documents contribute to fusion; changing $L$ may
@@ -14,9 +14,10 @@ of query expansion.
 \begin{figure}[!t]
   \centering
   \includegraphics[width=\columnwidth]{figures/fig_desa_intuition.pdf}
-  \caption{FiQA examples of DESA. Dense expansion recovers missing document
-  semantics; sparse anchoring promotes jointly supported passages and excludes
-  expansion-only matches. Ranks are channel ranks.}
+  \caption{FiQA examples of DESA \citep{maia-etal-2018-fiqa,thakur-etal-2021-beir}.
+  Dense expansion recovers missing document semantics; sparse anchoring promotes
+  jointly supported passages and excludes expansion-only matches. Two references
+  are shown per query; text is abridged and paraphrased, and ranks use draw~0.}
   \label{fig:desa-intuition}
 \end{figure}
 
@@ -38,8 +39,8 @@ access depth, but increases sparse access depth. Generated terms substantially
 enlarge the set of documents with nonzero sparse scores, preventing the sparse
 ranking from exhausting as early as it does for the original query. This
 reversal motivates an asymmetric design: dense retrieval should absorb new
-semantic evidence, whereas sparse retrieval should restrict it to documents
-already supported by the original query.
+semantic information, whereas sparse retrieval should restrict generated terms
+to documents already supported by the original query.
 
 We address this asymmetry with DESA (Dense Expansion and Sparse Anchoring), a
 channel-asymmetric query expansion method for hybrid retrieval. Given an
@@ -51,13 +52,13 @@ anchoring multiplies each document's scores under the original and expanded
 queries. Documents matched only by generated terms receive no anchored score,
 while the new terms may still reorder documents supported by the original
 query. Together, these operations broaden dense semantic coverage without
-broadening sparse support: Dense expands; sparse anchors.
+broadening sparse support: Dense expands; Sparse anchors.
 Figure~\ref{fig:desa-intuition} illustrates this division of labor through two
 retrieval examples.
 
-Across seven public retrieval benchmarks, DESA improves equal-dataset macro
+Across seven BEIR datasets, DESA improves equal-dataset macro
 nDCG@10 and Recall@20 over the unexpanded query by 3.82\% and 2.38\%, while
-reducing dense and sparse exact-access depths by 36.90\% and 36.56\%,
+reducing dense and sparse access depths by 36.90\% and 36.56\%,
 respectively. With equal dataset weighting, 63.31\% of queries become shallower
 in both channels. Mechanism experiments show that sparse anchoring contributes
 most of the effectiveness gain, while the dense orthogonal residual further

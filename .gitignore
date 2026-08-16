@@ -21,3 +21,8 @@ artifacts/results/aggregated/*
 !artifacts/**/.gitkeep
 report/figures/*.png
 report/figures/*.svg
+tmp/
+figures/candidates/
+figures/data/candidates/
+paper/acl2027/output/preprint/
+paper/acl2027/output/pdf/dense-expands-sparse-anchors-preprint.pdf

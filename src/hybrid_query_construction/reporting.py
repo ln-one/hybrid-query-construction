@@ -26,7 +26,7 @@ EVALUATION_DATASETS = (
     "webis-touche2020",
     "scidocs",
 )
-FIDELITY_DATASETS = ("fiqa", "arguana", "webis-touche2020", "scidocs")
+FIDELITY_DATASETS = EVALUATION_DATASETS
 
 
 def load_result_rows(input_directory: Path) -> list[dict[str, Any]]:
@@ -292,7 +292,7 @@ def _method_macro_intervals(query_means: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _classify_confirmatory_outcomes(tests: pd.DataFrame) -> pd.DataFrame:
+def _classify_primary_outcomes(tests: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for comparison, data in tests.groupby("comparison", sort=True):
         if (data["ci95_lower"] > 0.0).all():
@@ -458,7 +458,7 @@ def build_report(
     access, access_intervals = _access_changes(evaluation_query_means)
     tests = _paired_tests(evaluation_query_means)
     method_intervals = _method_macro_intervals(evaluation_query_means)
-    classifications = _classify_confirmatory_outcomes(tests)
+    classifications = _classify_primary_outcomes(tests)
 
     query_means.to_csv(output_directory / "per-query-draw-mean.csv", index=False)
     summary.to_csv(output_directory / "all-results.csv", index=False)

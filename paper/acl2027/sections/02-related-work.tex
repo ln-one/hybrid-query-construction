@@ -6,7 +6,7 @@
 LLM-based query expansion supplements short queries with document-like
 language that may be absent from the original formulation. HyDE encodes a
 generated hypothetical document for dense retrieval, whereas Query2doc appends
-a pseudo-relevant document to the query for sparse and dense retrieval
+a pseudo-document to the query for sparse and dense retrieval
 \citep{gao-etal-2023-precise,wang-etal-2023-query2doc}. Later methods generate
 different forms of evidence or sample multiple references to cover alternative
 expressions of the same information need
@@ -22,13 +22,13 @@ prefix from each ranking
 \citep{zhang-etal-2024-exploring-best,liu-zhang-2025-exp4fuse}. In hybrid
 retrieval, $L$ also determines which cross-channel contributions enter fusion,
 making the measured expansion effect conditional on the selected cutoff.
-Following EAHR, we evaluate complete-list retrieval quality separately from
+Following EAHR, we evaluate complete-list retrieval effectiveness separately from
 channel access depth \citep{zhang2026exact}, and ask whether query expansion can
 improve the former while reducing the latter.
 
 \subsection{Channel-Aware Integration}
 
-Generated evidence can enter retrieval through query text, dense
+Generated content can enter retrieval through query text, dense
 representations, term weights, or rank fusion. Query2doc modifies the query
 text, MuGI pools representations from multiple references, Word2Passage
 reweights generated terms, and Exp4Fuse combines original and expanded
@@ -36,11 +36,13 @@ rankings
 \citep{wang-etal-2023-query2doc,zhang-etal-2024-exploring-best,choi-etal-2025-word2passage,liu-zhang-2025-exp4fuse}.
 DVCQR further constructs separate lexical and semantic views for sparse and
 dense retrieval \citep{li-etal-2026-dvcqr}. These methods differ in where
-expansion is integrated; DESA instead focuses on how the same evidence should
+expansion is integrated; DESA instead focuses on how the same generated passages should
 be constrained differently across the two channels.
 
-QuDAR adaptively fuses four rankings obtained from original and expanded
-queries under sparse and dense retrieval \citep{kim-etal-2026-qudar}. DESA
-instead modifies the two rankings before fusion: generated evidence expands
-Dense semantics while Sparse remains anchored to the original query's lexical
-support.
+Recent work also combines heterogeneous retrievers per query: MoR weights
+sparse and dense retrievers, while QuDAR adaptively fuses four rankings formed
+by original and expanded queries under both retriever types
+\citep{kalra-etal-2025-mor,kim-etal-2026-qudar}. DESA instead modifies the dense
+and sparse rankings before fusion: generated passages expand dense semantic
+coverage while sparse retrieval remains anchored to the original query's
+lexical support.

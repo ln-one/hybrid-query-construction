@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "figures"))
 
-from qudar_style import COLORS, MARKERS, apply_style, finish_axis, save_figure
-
+from qudar_style import COLORS, MARKERS, apply_style, finish_axis, save_figure  # noqa: E402
 
 RESULTS = ROOT / "report" / "main-results.csv"
 QUDAR = ROOT / "report" / "qudar-baseline-results.csv"
@@ -37,7 +36,6 @@ def _macro_results() -> pd.DataFrame:
         .set_index("method")
     )
     macro["total_depth"] = macro["dense_depth"] + macro["sparse_depth"]
-    original_depth = float(macro.loc["original", "total_depth"])
     qudar = pd.read_csv(QUDAR)
     qudar_macro = qudar[qudar["method"] == "qudar_simple_rrf_matched"][
         ["ndcg_at_10", "recall_at_20"]

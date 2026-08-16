@@ -13,11 +13,14 @@ from .models import GenerationRecord, QueryResult
 from .storage import ranking_store_digest
 from .tiny import run_tiny
 
+EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+PUBLIC_EMAILS = {"chronis@my.swjtu.edu.cn"}
+
 SECRET_PATTERNS = (
     re.compile(r"gh[opurs]_[A-Za-z0-9_]{20,}"),
     re.compile(r"sk-[A-Za-z0-9_-]{20,}"),
     re.compile(re.escape("/") + r"Users/[^/\s]+/"),
-    re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
+    EMAIL_PATTERN,
 )
 
 
@@ -48,7 +51,10 @@ def verify_repository(root: Path) -> dict[str, object]:
         except UnicodeDecodeError:
             continue
         for pattern in SECRET_PATTERNS:
-            if pattern.search(text):
+            matches = list(pattern.finditer(text))
+            if pattern is EMAIL_PATTERN:
+                matches = [match for match in matches if match.group(0) not in PUBLIC_EMAILS]
+            if matches:
                 errors.append(f"possible private value in {path.relative_to(root)}")
                 break
 

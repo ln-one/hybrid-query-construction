@@ -1,12 +1,24 @@
-\section{Generation and Baseline Details}
+\section{Reproducibility Details}
+\label{sec:appendix-reproducibility}
+\raggedbottom
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{12pt plus 2pt minus 2pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\setlength{\@dblfptop}{0pt}
+\setlength{\@dblfpsep}{12pt plus 2pt minus 2pt}
+\setlength{\@dblfpbot}{0pt plus 1fil}
+\makeatother
+
+This section records the generation, query-construction, retrieval, and replay
+settings needed to reproduce the experiments.
 
 \subsection{Complementary Reference Generation}
 
-We use the same revision of Qwen2.5-7B-Instruct for the model and tokenizer:
+We use the following Qwen2.5-7B-Instruct revision for both the model and
+tokenizer:
 
-\begin{center}\small
-\texttt{fe11104b620d588ccc049ff6631dd3ea002e3d98}
-\end{center}
+{\footnotesize\noindent\texttt{fe11104b620d588ccc049ff6631dd3ea002e3d98}\par}
 
 The unquantized BF16 model runs with MLX-LM 0.31.2. Decoding uses a
 temperature of 0.7, top-$p$ of 0.9, top-$k$ of 20, and a maximum of 256 new
@@ -32,71 +44,112 @@ query identifier, Markdown, placeholders, or any other text. Every item must
 contain a substantive passage.
 \end{quote}
 
-The query is supplied in a canonical JSON object with a single \texttt{query}
-field. XGrammar 0.2.1 constrains the response to a JSON array containing exactly
-five strings. Validation rejects empty passages, placeholders, and duplicates.
-An invalid response is retried once with the same seed, the previous response,
-and validation feedback. If the retry also fails, the failure is recorded and
-the corresponding query and generation run fall back to the unexpanded query.
+The query is supplied as a canonical JSON object with one \texttt{query} field.
+XGrammar 0.2.1 requires exactly five strings; validation rejects empty,
+duplicate, or placeholder passages. Invalid output is retried once with the
+same seed and validation feedback, then falls back to the unexpanded query.
 
 The second generator is Mistral-7B-Instruct-v0.3 at revision
 
-\begin{center}\small
-\texttt{c170c708c41dac9275d15a8fff4eca08d52bab71}.
-\end{center}
+{\footnotesize\noindent\texttt{c170c708c41dac9275d15a8fff4eca08d52bab71}.\par}
 
 It uses the same decoding, batching, and validation settings.
 
 \subsection{Query Construction}
 
-All averaging, projection, and normalization operations in orthogonal residual
-expansion use float32. Shared expansion uses the same representations of the
-query-reference pairs, but averages and normalizes them without removing the
-component parallel to the original query. Each pair is encoded as
-\texttt{query [SEP] reference}.
+Orthogonal residual expansion uses float32 throughout. Shared expansion uses
+the same \texttt{query [SEP] reference} representations, but averages and
+normalizes them without removing the component parallel to the original query.
 
 For sparse retrieval, the expanded query contains one copy of the original
 query followed by the selected reference passages. BM25 scores under the
 original and expanded queries are stored separately before applying the
-document-wise score product. The binary-mask ablation retains the
-expanded-query score for documents matched by both queries. The references-only
-ablation removes the original query before retrieval. Our construction neither
-repeats the original query nor uses the MuGI repetition coefficient.
+document-wise score product. The binary-mask ablation retains the expanded-query
+score only for documents matched by both queries; the references-only ablation
+removes the original query. DESA neither repeats the original query nor uses
+MuGI's repetition coefficient.
 
 \subsection{Baseline Reproduction}
 
-All generative baselines use the same primary generator so that their
-differences mainly reflect query construction rather than model capacity. The
-exact prompts are included in the accompanying repository.
+All generative baselines use the same primary generator. Exact prompts and the
+reproduction code are available at
+\url{https://github.com/ln-one/hybrid-query-construction}.
 
-HyDE generates eight hypothetical texts per run, encodes them independently as
-documents, and averages their normalized representations. Its sparse channel
-uses the original query. FiQA, ArguAna, SciFact, and TREC-COVID use
-task-specific generation instructions; the remaining datasets use a general
-retrieval instruction. HyDE allows up to 512 new tokens per generation.
+HyDE generates eight hypothetical documents per run and averages their
+normalized representations; its sparse channel uses the original query. FiQA,
+ArguAna, SciFact, and TREC-COVID use task-specific instructions, the remaining
+datasets use a general instruction, and generation is capped at 512 new tokens.
 
-Query2doc generates one pseudo-relevant document of at most 120 words. Dense
-retrieval encodes the concatenation of the original query and pseudo-document.
-Sparse retrieval concatenates five copies of the original query with the
-pseudo-document.
+Query2doc generates one pseudo-document of at most 120 words. Dense retrieval
+encodes it with the original query; sparse retrieval concatenates it with five
+copies of the original query.
 
-MuGI generates five pseudo-references. Dense retrieval averages the
-representations obtained by concatenating the original query with each
-reference. Sparse retrieval repeats the original query
+MuGI generates five pseudo-references. Dense retrieval averages the five
+query--reference representations. Sparse retrieval repeats the original query
 
 \[
-\left\lfloor\frac{|R|}{|q_o|\beta}\right\rfloor
+\left\lfloor\frac{\sum_{i=1}^{n}|r_i|}{|q_o|\beta}\right\rfloor
 \]
 
-times before appending all references, where $|\cdot|$ denotes character length
-and $\beta=4$. We reproduce MuGI's generation and query integration components
-without its pseudo-relevance feedback calibration.
+times before appending all references, where $|\cdot|$ denotes character
+length and $\beta=4$. We reproduce MuGI's generation and query integration
+components without its pseudo-relevance feedback calibration.
+
+\subsection{Retrieval Implementation}
+
+BGE-small-en-v1.5 uses revision
+
+{\footnotesize\noindent\texttt{5c38ec7c405ec4b44b94cc5a9bb96e735b38267a}.\par}
+
+Queries are prefixed with
+``Represent this sentence for searching relevant passages:'' and encoded
+with a maximum length of 512 tokens. Contriever uses mean pooling at revision
+
+{\footnotesize\noindent\texttt{2bd46a25019aeea091fd42d1f0fd4801675cf699}.\par}
+
+All query and document embeddings are normalized. Pyserini 2.3.0 runs with
+Java 21 and uses \texttt{DefaultEnglishAnalyzer}. A separate Lucene index is
+built for each dataset and each TREC-COVID snapshot, so BM25 collection
+statistics are computed within the corresponding corpus. Documents with equal
+retrieval or fusion scores are ordered by the UTF-8 order of their identifiers.
+
+\subsection{Access-Depth Replay}
+
+This implements the fixed bound-based replay protocol adopted in
+Section~\ref{sec:quality-access} from \citet{zhang2026exact}. The replay starts
+with empty dense and sparse prefixes. After reading $l_c$
+items from channel $c$, its next unread contribution is bounded by
+
+\[
+u_c(l_c)=\frac{1}{60+l_c+1}.
+\]
+
+The bound becomes zero after exhaustion. The replay reads the channel with the
+larger bound, breaking ties toward dense. An observed document's accumulated
+score is a lower bound; an unseen contribution is bounded by the corresponding
+next-unread value, and a document unseen in both channels by their sum. Replay
+stops when these bounds certify top-20 membership and order, recording
+$(L_D,L_S)=(l_D,l_S)$.
+
+\subsection{Artifact Traceability}
+
+Generation records store the raw and parsed output, hashes, decoding settings,
+seed, retries, runtime lock, and code commit. Query-level records store the
+method, generation run, effectiveness, $(L_D,L_S)$, sparse support and
+exhaustion, ordered top-20, and hashes of the compressed rankings,
+configuration, generation, and replay trace.
+
+The Python environment is fixed by \texttt{uv.lock}; Java is checked before
+retrieval. A hash manifest records code, configurations, prompts, inputs,
+models, generations, and rankings. Reported tables are rebuilt from the
+query-level records.
 
 \section{Operator Properties and Mechanism Diagnostics}
+\label{sec:appendix-operators}
 
 \subsection{Properties of the Channel Operators}
 
-For the Dense construction, each contextual vector $\mathbf v_i$ is unit
+For the dense construction, each contextual vector $\mathbf v_i$ is unit
 normalized. The triangle inequality gives
 
 \[
@@ -119,7 +172,7 @@ $\|\mathbf v_o\|=1$,
 
 If $\mathbf z=\mathbf 0$, normalization leaves $\mathbf v_o$ unchanged.
 
-For Sparse, non-negativity gives
+For sparse retrieval, non-negativity gives
 $\operatorname{supp}(s_os_r)=
 \operatorname{supp}(s_o)\cap\operatorname{supp}(s_r)$. Additivity and the
 inclusion of $q_o$ in $q_r$ imply
@@ -132,20 +185,18 @@ only rescales every anchored score and likewise leaves the ranking unchanged.
 \subsection{Mechanism Diagnostics}
 \label{sec:appendix-mechanism}
 
-Table~\ref{tab:mechanism-diagnostics} reports the quantities used to inspect
-the realized operators. Dense angle is measured between the original and
-expanded query vectors. Sparse turnover is one minus Top-20 overlap with the
-original sparse ranking. Relevant RR change averages the difference in
-reciprocal rank for judged relevant documents that appear in the exported
-rankings. All macro values give each dataset equal weight.
+Table~\ref{tab:mechanism-diagnostics} reports dense angle, one minus sparse
+top-20 overlap with Original, and the mean reciprocal-rank change of judged
+relevant documents present in the exported rankings. Macros weight datasets
+equally.
 
-\begin{table*}[t]
+\begin{table*}[!t]
 \centering
 \small
 \setlength{\tabcolsep}{5.0pt}
 \begin{tabular}{lrrrr}
 \toprule
-Dataset & Dense angle ($^\circ$) & Sparse Top-20 turnover (\%) & Relevant RR change & Support retained (\%) \\
+Dataset & Dense angle ($^\circ$) & Sparse top-20 turnover (\%) & Relevant RR change & Support retained (\%) \\
 \midrule
 SciFact        &  9.38 & 18.88 & .0211 & 100.0000 \\
 NFCorpus       & 17.65 & 18.69 & .0147 & 100.0000 \\
@@ -165,64 +216,64 @@ original sparse support; the displayed macro rounds to 100.0000\%.}
 \end{table*}
 
 Figure~\ref{fig:mechanism-distributions} shows the query-level distributions
-behind the aggregate diagnostics. Across 11,327 query--draw pairs, the mean
-Dense angle is $11.98^\circ$ and the maximum is $27.87^\circ$, below the
-analytic $45^\circ$ bound. Sparse anchoring changes 26.15\% of the Original
-Sparse Top-20 on average.
+behind the aggregate diagnostics. One invalid-generation fallback leaves
+11,327 query--draw pairs. Their mean
+dense angle is $11.98^\circ$ and the maximum is $27.87^\circ$, below the
+analytic $45^\circ$ bound. Sparse anchoring changes 26.15\% of the original
+sparse top-20 on average.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig_mechanism_distributions.pdf}
 \caption{Realized behavior of the two channel operators over three generation
-draws on seven datasets. Dense angles are measured from the Original query;
-Sparse turnover is one minus Top-20 overlap with the Original Sparse ranking.
+draws on seven datasets. Dense angles are measured from the original query;
+sparse turnover is one minus top-20 overlap with the original sparse ranking.
 Boxes show the interquartile range and median; whiskers extend to 1.5 times the
 interquartile range, with outliers omitted.}
 \label{fig:mechanism-distributions}
 \end{figure}
 
-The within-dataset quartiles in Figure~\ref{fig:mechanism-bins} are not
-monotonic. Larger Dense angles do not consistently improve either nDCG or
-access depth, and greater Sparse turnover does not consistently do so either.
-The descriptive correlations lead to the same distinction: relevant-document
-reciprocal-rank gain has a mean Spearman correlation of .391 with Sparse-only
-nDCG gain, whereas overall turnover has a correlation of .078. The corresponding
-Dense-angle correlations with nDCG gain and depth reduction are .010 and .011.
-These observations do not support an angle or turnover threshold.
+Within-dataset quartiles show no monotonic relation between either diagnostic
+and effectiveness or access depth. Relevant-document reciprocal-rank gain
+correlates more strongly with sparse-only nDCG gain than overall turnover does
+(.391 versus .078); dense-angle correlations with nDCG gain and depth reduction
+are .010 and .011. The data therefore support no angle or turnover threshold.
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig_mechanism_binned_effects.pdf}
-\caption{Equal-dataset means after assigning queries to within-dataset
-quartiles of Dense angle or Sparse Top-20 turnover. Positive depth reduction
-means shallower replay. The nonmonotonic curves are reported as descriptive
-mechanism diagnostics, not as a basis for threshold selection.}
-\label{fig:mechanism-bins}
-\end{figure*}
+Exact support preservation assumes a non-negative additive scorer and complete
+score export. It holds for six datasets. Touch\'e-2020 omits 25 extremely
+low-scoring tail documents across 23 of 147 query--draw pairs; mean and minimum
+retention are 99.99990\% and 99.99881\%. We retain these cases and do not call
+the Lucene export exactly support preserving there.
 
-The ideal support-preservation property assumes a non-negative additive
-Sparse scorer and complete score export. It holds exactly in the exported
-rankings for six datasets. On Touch\'e-2020, 23 of 147 query--draw pairs omit
-one or two extremely low-scoring tail documents, for 25 omissions in total.
-Mean support retention is 99.99990\%, and the minimum is 99.99881\%. We retain
-these cases in the diagnostic artifacts and do not treat the practical Lucene
-export as exactly support preserving on this dataset.
-
-\section{Retrieval and Access Analysis}
+\section{Additional Experimental Results}
 \label{sec:appendix-analysis}
 
-\subsection{Per-Dataset Controlled Results}
+\subsection{Additional Ablations and Robustness}
+\label{sec:additional-results}
 
-Table~\ref{tab:per-dataset-controlled} exposes the dataset-level values behind
-the controlled macro comparison. The three methods use identical generated
-references where applicable. Sparse support is the mean number of
-positive-score documents; exhaustion is the fraction of query--draw rankings
-whose finite Sparse support is exhausted during replay.
+Binary masking preserves sparse support but removes original-score magnitude,
+lowering macro nDCG@10 by 1.54\% and Recall@20 by 0.74\%. Increasing references
+from one to three improves nDCG@10 by 1.91\% and reduces dense/sparse replay
+stopping depths by 17.23\%/18.14\%; using five adds 0.35\% nDCG@10 and 0.43\%
+Recall@20, with further reductions of 3.83\%/3.40\%.
 
-\begin{table*}[t]
+With Mistral, all four sampled datasets retain non-negative effectiveness
+changes and 7.12--47.61\%/7.16--47.62\% dense/sparse depth reductions; 10\% of
+sampled ArguAna queries fall back. Contriever improves both metrics on all four
+datasets but raises Touch\'e-2020 depths by 14.29\%/4.34\%. Nested TREC-COVID
+gains and reductions remain positive but non-monotonic.
+
+\subsection{Matched Operator and QuDAR Controls}
+
+Tables~\ref{tab:operator-controls} and~\ref{tab:qudar-matched} report matched
+controls. Operator pairs share references, keep the other channel at Original,
+and average three draws within query before inference.
+
+\begin{table*}[!t]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{3.1pt}
+\footnotesize
+\textbf{(a) Per-dataset controlled results}\par\smallskip
+\setlength{\tabcolsep}{2.2pt}
 \begin{tabular}{llrrrrrrr}
 \toprule
 Dataset & Method & Queries & nDCG@10 & Recall@20 & $L_D$ & $L_S$ & Sparse support & Exhaust. (\%) \\
@@ -256,22 +307,12 @@ Touch\'e-2020 & Original & 49 & .3786 & .3382 & 2081.8 & 2081.4 & 151619.0 & 0.0
               & DESA     &    & .4071 & .3560 & 1127.8 & 1127.4 & 151618.9 & 0.00 \\
 \bottomrule
 \end{tabular}
-\caption{Per-dataset controlled results for the seven evaluation collections.}
-\label{tab:per-dataset-controlled}
-\end{table*}
 
-\subsection{Primary Statistical Tests}
-
-Table~\ref{tab:primary-tests} reports the complete seven-dataset statistical
-record. For retrieval metrics, the favorable difference is DESA minus the
-comparator; for depth, it is the comparator minus DESA, so positive values
-always favor DESA. Holm correction is applied over the four outcomes
-separately for each prespecified comparator.
-
-\begin{table}[t]
+\medskip
+\begin{minipage}[t]{0.49\textwidth}
 \centering
-\scriptsize
-\setlength{\tabcolsep}{1.8pt}
+\textbf{(b) Primary statistical tests}\par\smallskip
+\setlength{\tabcolsep}{1.2pt}
 \begin{tabular}{lll}
 \toprule
 Comparison / outcome & Effect [95\% CI] & $p/p_{\mathrm{Holm}}$ \\
@@ -287,52 +328,14 @@ Shared / $L_D$       & -121.4 [-367.0, 39.7]    & .3157 / .6313 \\
 Shared / $L_S$       & -66.5 [-310.6, 93.0]     & .7909 / .7909 \\
 \bottomrule
 \end{tabular}
-\caption{Stratified paired tests across the seven evaluation collections after
-averaging the three generation draws within query.}
-\label{tab:primary-tests}
-\end{table}
-
-\subsection{Cutoff, Operator-Control, and QuDAR Details}
-
-Table~\ref{tab:fixed-l} reports the complete macro nDCG@10 values behind the
-fixed-cutoff analysis.
-
-\begin{table*}[t]
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\textwidth}
 \centering
-\scriptsize
-\setlength{\tabcolsep}{2.7pt}
-\begin{tabular}{lrrrrrrrr}
-\toprule
-Method & $L=10$ & $L=20$ & $L=50$ & $L=100$ & $L=200$ & $L=500$ & $L=1000$ & Complete \\
-\midrule
-No expansion        & .4478 & .4489 & .4512 & .4553 & .4565 & .4569 & .4571 & \textbf{.4572} \\
-Shared              & .4630 & .4633 & .4641 & .4645 & .4666 & .4670 & \textbf{.4671} & \textbf{.4671} \\
-Dense only          & .4566 & .4568 & .4582 & .4608 & .4617 & \textbf{.4622} & .4621 & .4621 \\
-Sparse only         & .4661 & .4676 & .4654 & .4686 & .4704 & .4713 & \textbf{.4715} & .4714 \\
-MuGI-style (controlled) & .4612 & .4615 & .4608 & .4613 & .4630 & .4636 & .4637 & \textbf{.4638} \\
-Sparse binary mask  & .4635 & .4637 & .4639 & .4649 & .4670 & .4672 & \textbf{.4675} & \textbf{.4675} \\
-Reference-only sparse & .4534 & .4537 & .4529 & .4537 & .4555 & .4559 & .4564 & \textbf{.4565} \\
-DESA                & .4738 & .4727 & .4709 & .4727 & .4740 & .4743 & \textbf{.4747} & \textbf{.4747} \\
-\bottomrule
-\end{tabular}
-\caption{Equal-dataset macro nDCG@10 under fixed top-$L$ and complete-list
-fusion on the seven evaluation datasets. Bold marks the maximum within each
-row.}
-\label{tab:fixed-l}
-\end{table*}
-
-Table~\ref{tab:cutoff-query-diagnostics} reports the query--draw diagnostic
-behind the fixed-cutoff discussion. Conclusion change compares the sign of the
-method--Original difference under fixed-$L$ and complete-list fusion. Strict
-reversal excludes changes to or from a tie.
-
-\begin{table}[t]
-\centering
-\scriptsize
-\setlength{\tabcolsep}{3.0pt}
+\textbf{(c) Fixed-cutoff diagnostics}\par\smallskip
+\setlength{\tabcolsep}{2.2pt}
 \begin{tabular}{rrrrrr}
 \toprule
-$L$ & Exact Top-20 & \multicolumn{2}{c}{nDCG (\%)} & \multicolumn{2}{c}{Recall (\%)} \\
+$L$ & Exact top-20 & \multicolumn{2}{c}{nDCG (\%)} & \multicolumn{2}{c}{Recall (\%)} \\
  & (\%) & Change & Reverse & Change & Reverse \\
 \midrule
 20   & 1.92 & 18.23 & 8.84 & 22.50 & 3.84 \\
@@ -341,18 +344,18 @@ $L$ & Exact Top-20 & \multicolumn{2}{c}{nDCG (\%)} & \multicolumn{2}{c}{Recall (
 1000 & 92.62 & 0.19 & 0.01 & 1.18 & 0.00 \\
 \bottomrule
 \end{tabular}
-\caption{DESA query--draw sensitivity to fixed Top-$L$, macro-averaged with
-equal dataset weight. Exact Top-20 compares with complete-list fusion;
+\end{minipage}
+\caption{Additional results. (a) Dataset-level controlled results. (b)
+Stratified paired tests after within-query averaging over three generation
+draws. (c) DESA query--draw sensitivity to fixed top-$L$, macro-averaged with
+equal dataset weight; exact top-20 compares with complete-list fusion, and the
 conclusion columns compare DESA with Original.}
+\label{tab:per-dataset-controlled}
+\label{tab:primary-tests}
 \label{tab:cutoff-query-diagnostics}
-\end{table}
+\end{table*}
 
-Table~\ref{tab:operator-controls} isolates the transformation applied within
-each channel. The control pairs use identical generated references and keep
-the other channel at its original-query ranking. Effects average the three
-draws within query before paired inference.
-
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{2.8pt}
@@ -367,18 +370,18 @@ Rewrite Sparse    & .4686 & .4670 \\
 Product Sparse    & .4714 & .4678 \\
 \midrule
 \multicolumn{3}{l}{Paired effect (proposed $-$ control)} \\
-Dense residual, nDCG   & \multicolumn{2}{l}{$-.00005$ [$-.00086,.00082$], $p_H=1.0$} \\
-Dense residual, Recall & \multicolumn{2}{l}{$-.00006$ [$-.00043,.00033$], $p_H=1.0$} \\
-Sparse product, nDCG   & \multicolumn{2}{l}{$ .00283$ [$-.00126,.00693$], $p_H=.3650$} \\
-Sparse product, Recall & \multicolumn{2}{l}{$ .00078$ [$-.00184,.00331$], $p_H=.5689$} \\
+Dense residual, nDCG   & \multicolumn{2}{l}{$-.00005$ [$-.00086,.00082$], $p_{\mathrm{Holm}}=1.0$} \\
+Dense residual, Recall & \multicolumn{2}{l}{$-.00006$ [$-.00043,.00033$], $p_{\mathrm{Holm}}=1.0$} \\
+Sparse product, nDCG   & \multicolumn{2}{l}{$ .00283$ [$-.00126,.00693$], $p_{\mathrm{Holm}}=.3650$} \\
+Sparse product, Recall & \multicolumn{2}{l}{$ .00078$ [$-.00184,.00331$], $p_{\mathrm{Holm}}=.5689$} \\
 \bottomrule
 \end{tabular}
-\caption{Equal-dataset macro functional controls and query-level paired
-effects. Holm correction is over nDCG and Recall within each control pair.}
+\caption{Macro operator controls and query-level paired effects. Holm
+correction covers nDCG and Recall within each control pair.}
 \label{tab:operator-controls}
 \end{table}
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{2.9pt}
@@ -398,103 +401,10 @@ Touch\'e-2020 & .4071 & .4137 & .3560 & .3500 \\
 Equal-dataset macro & .4747 & .4761 & .4695 & .4714 \\
 \bottomrule
 \end{tabular}
-\caption{Matched-evidence comparison with QuDAR-simple RRF. QuDAR fuses the
-Top-1000 OS, ES, OD, and ED rankings with RRF constant 60. DESA--QuDAR paired
-effects are $-.00145$ [$-.00478,.00181$] for nDCG and $-.00188$
-[$-.00400,.00019$] for Recall, with $p_H=.3966$ and $.1668$.}
+\caption{Matched-reference comparison with QuDAR-simple RRF (top-1000
+original-sparse (OS), expanded-sparse (ES), original-dense (OD), and
+expanded-dense (ED) rankings; $k=60$). DESA--QuDAR paired effects are $-.00145$
+[$-.00478,.00181$] for nDCG and $-.00188$ [$-.00400,.00019$] for Recall
+($p_{\mathrm{Holm}}=.3966$ and $.1668$).}
 \label{tab:qudar-matched}
 \end{table}
-
-\subsection{Additional Ablations and Robustness}
-\label{sec:additional-results}
-
-The binary-mask ablation retains the same Sparse support as score-product
-anchoring but discards the magnitude of the original-query score. Replacing the
-score product with this mask lowers macro nDCG@10 by 1.54\% and Recall@20 by
-0.74\%. The graded original score therefore improves the ordering of documents
-within the retained support.
-
-Reference count affects both effectiveness and access depth. Increasing the
-number of complementary passages from one to three improves nDCG@10 by 1.91\%
-and reduces Dense and Sparse stopping depths by 25.46\% and 26.61\%. Increasing
-the count from three to five adds 0.35\% nDCG@10 and 0.43\% Recall@20, with
-further depth reductions of 6.05\% and 5.62\%.
-
-With Mistral as the generator, DESA produces non-negative nDCG@10 and Recall@20
-changes on every dataset in the sampled four-dataset subset. Relative to
-Original, Dense depth reductions range from 7.12\% to 47.61\%, and Sparse depth
-reductions range from 7.16\% to 47.62\%. On ArguAna, 10\% of the 100 sampled
-queries fall back to Original after invalid structured output.
-
-Replacing BGE with Contriever also improves both retrieval metrics on all four
-sampled datasets. Touch\'e-2020 is the observed access-depth failure case:
-Dense and Sparse stopping depths increase by 14.29\% and 4.34\%, respectively.
-
-Across the 25k, 50k, 100k, and 171k TREC-COVID corpora, nDCG@10 gains range
-from 3.69\% to 5.78\%, and Recall@20 gains range from 5.56\% to 9.21\%. The
-Dense and Sparse depth reductions are 68.12\%/68.16\%, 65.11\%/65.14\%,
-79.83\%/79.84\%, and 74.89\%/66.71\%, respectively. The access benefit remains
-substantial at every tested size and reaches its maximum at 100k documents.
-
-\subsection{Retrieval Implementation}
-
-BGE-small-en-v1.5 uses revision
-
-\begin{center}\small
-\texttt{5c38ec7c405ec4b44b94cc5a9bb96e735b38267a}.
-\end{center}
-
-Queries are prefixed with
-``Represent this sentence for searching relevant passages:'' and encoded
-with a maximum length of 512 tokens. Contriever uses mean pooling and revision
-
-\begin{center}\small
-\texttt{2bd46a25019aeea091fd42d1f0fd4801675cf699}.
-\end{center}
-
-All query and document embeddings are normalized.
-
-Pyserini 2.3.0 runs with Java 21 and uses \texttt{DefaultEnglishAnalyzer}. A
-separate Lucene index is built for each dataset and each TREC-COVID snapshot,
-so BM25 collection statistics are computed within the corresponding corpus.
-Documents with equal retrieval or fusion scores are ordered by the UTF-8 order
-of their identifiers.
-
-\subsection{Access-Depth Replay}
-
-The replay begins with empty Dense and Sparse prefixes. After $l_c$ items have
-been read from channel $c$, the maximum contribution of its next unread
-document is
-
-\[
-u_c(l_c)=\frac{1}{60+l_c+1}.
-\]
-
-The bound is zero after a channel is exhausted. At each step, the replay reads
-from the channel with the larger next-unread bound, breaking ties in favor of
-Dense.
-
-For an observed document, its accumulated contribution is a score lower bound.
-If the document has not appeared in the other channel, that channel's
-next-unread contribution supplies an additional upper bound. A document unseen
-in both channels is bounded by the sum of the two next-unread contributions.
-
-The replay stops when these bounds certify both the membership and order of the
-current top-20. The stopping depths are recorded as
-$(L_D,L_S)=(l_D,l_S)$.
-
-\subsection{Artifact Traceability}
-
-Each generation record contains the raw response, parsed passages, prompt and
-model hashes, decoding parameters, seed, retry history, runtime lock, and code
-commit. Dense and Sparse rankings are stored by channel in a compressed ranking
-store and assigned SHA-256 hashes. Each query-level result contains the method,
-generation run, effectiveness metrics, $(L_D,L_S)$, sparse support and
-exhaustion status, ordered top-20, and hashes of the generation, rankings,
-method configuration, and replay trace.
-
-The Python environment is fixed by \texttt{uv.lock}, and the Java version is
-checked before retrieval. Before final evaluation, the code,
-configurations, prompts, source inputs, model artifacts, generations, and
-ranking stores are recorded in a hash manifest. All reported tables are
-reconstructed from the resulting query-level records.

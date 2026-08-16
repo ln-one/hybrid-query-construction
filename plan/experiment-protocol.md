@@ -8,19 +8,14 @@
 - RQ3: Which effects are attributable to Dense residual expansion and Sparse anchoring?
 - RQ4: Are conclusions stable across datasets, draws, generators, retrievers, and reference counts?
 - RQ5: How do logical access ratios change within nested snapshots of one corpus?
-- RQ6: Do the two channel operators exhibit their intended mechanisms in the
-  realized rankings, and do simple measures of mechanism strength explain
-  quality or stopping-depth changes?
 
 ## Data boundary
 
-The formal evaluation contains seven datasets: SciFact, NFCorpus, TREC-COVID,
-FiQA, ArguAna, Touché-2020, and SCIDOCS. All seven appear in dataset-level tables
-and receive equal weight in macro results. For datasets evaluated behind the qrels
-firewall, the generation and ranking phase may read evaluation-split membership and
-corpora, but not document judgments or grades. Full qrels become available only
-after a lock manifest hashes code, configs, prompts, generations, indices, and
-rankings.
+Development only: SciFact, NFCorpus, TREC-COVID. Held-out: FiQA, ArguAna,
+Touché-2020, SCIDOCS. The generation and ranking phase may read held-out queries,
+their evaluation-split membership, and corpora, but not document judgments or grades.
+Full qrels become available only after a lock manifest hashes code, configs, prompts,
+generations, indices, and rankings.
 
 BEIR archives can contain queries from several splits in one `queries.jsonl`. Dataset
 preparation retains only query IDs present in the selected qrels split. Only this ID
@@ -57,24 +52,10 @@ failure receives one retry with the same seed. A second failure is recorded and 
 generated methods use Original for that query/draw. No failed cell is silently dropped.
 
 Any bug discovered after qrels access increments the protocol version and reruns all
-affected conditions. No method, prompt, parameter, preferred draw, or dataset may be
-changed in response to evaluation results.
+affected held-out conditions. No method, prompt, parameter, preferred draw, or dataset
+may be changed in response to held-out results.
 
 The three draws for one query are sampled together in a fixed batch of eight sorted
 queries so they reuse prompt prefill. The batch seed and each draw index are stored.
 Invalid draws from that batch receive one deterministic retry batch with the same seed
 and validation feedback; valid draws from the initial batch are never replaced.
-
-## Post-hoc mechanism diagnostics
-
-Mechanism diagnostics reuse the frozen generations, document representations,
-rankings, and qrels. They do not change any primary result. Dense expansion is
-summarized by the angle between the original and expanded query vectors. Sparse
-anchoring is summarized by Top-20 turnover, Top-100 overlap, support retention, and
-the change in reciprocal rank of relevant documents. Dense-only and Sparse-only
-outcomes isolate the corresponding operator.
-
-Associations are reported with within-dataset quartiles and Spearman correlations,
-then averaged with equal dataset weight. These analyses are descriptive: they test
-whether the implemented operators behave as intended and expose failure boundaries;
-they are not used to select thresholds, datasets, or adaptive policies.

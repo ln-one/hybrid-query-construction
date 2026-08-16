@@ -1,11 +1,11 @@
 \section*{Limitations}
 
-Our evaluation covers seven English BEIR collections, two generators, two
-dense encoders, BM25, and equal-weight WRRF. The results may differ for other
+Our evaluation covers seven English BEIR datasets, two generators, two
+dense encoders, BM25, and equal-weight RRF. The results may differ for other
 languages, learned sparse retrievers, or fusion rules. Score-product anchoring
 further assumes a non-negative sparse scoring function.
 
-Replay depth measures the ranked evidence needed to certify the fused
+Replay stopping depth measures the ranked evidence needed to certify the fused
 top-$K$, rather than wall-clock latency. End-to-end efficiency also depends on
 generation, encoding, indexing, and the retrieval interface. Generated
 references may contain irrelevant or unsupported expressions, while pooled

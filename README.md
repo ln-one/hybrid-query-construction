@@ -1,9 +1,8 @@
-# Hybrid Query Construction
+# DESA: Dense Expansion and Sparse Anchoring
 
-This private research repository evaluates DESA (Dense Expansion and Sparse
-Anchoring), a channel-asymmetric query construction for hybrid dense--sparse
-retrieval. It is intentionally independent of EAHR,
-Stratumind, Qdrant, and any private production implementation.
+This repository contains the code, configurations, and result records for
+DESA, a channel-asymmetric query expansion method for hybrid dense--sparse
+retrieval.
 
 The repository is experiment-first. The formal evaluation covers SciFact,
 NFCorpus, TREC-COVID, FiQA, ArguAna, Touché-2020, and SCIDOCS, with every
@@ -23,10 +22,7 @@ make verify
 - `make verify` checks schemas, hashes, deterministic ties, replay parity, tests,
   and repository hygiene.
 
-Formal generation, indexing, retrieval, and evaluation are separate commands so that
-held-out document judgments and grades are unavailable until the pre-evaluation lock
-is written. Evaluation-split query membership is prepared in advance because it
-defines which public queries belong to each benchmark test set.
+Generation, indexing, retrieval, and evaluation are separate, resumable commands.
 
 ## Formal command boundary
 
@@ -46,21 +42,20 @@ Baseline prompts are generated into separate files and supplied to `hqc rank` wi
 reproduction cards in `plan/reproduction-cards/` state every deliberate departure
 from the original papers.
 
-The exact formal command order, qrels firewall, robustness stores, ablations, and
-clean rebuild are specified in `plan/formal-runbook.md`.
+The full command order, robustness runs, ablations, and clean rebuild are specified
+in `plan/formal-runbook.md`.
 
 After the compatibility gate, the complete resumable execution is:
 
 ```bash
-make formal-preheldout
-make formal-evaluate
+make formal-freeze
+make formal-report
 ```
 
-The first command stops after hashing and locking every pre-evaluation artifact. The
-second verifies that lock before extracting held-out judgments and building all result
-tables, figures, and the Chinese report.
+The first command builds and locks the retrieval artifacts. The second verifies the
+lock and rebuilds the result tables and figures.
 
-## Research boundary
+## Outputs
 
-The primary outcomes are retrieval quality and logical per-channel access depth.
-No wall-clock latency or end-to-end speedup claim is made by this repository.
+The paper source is in `paper/acl2027/`. Aggregated results are in `report/`, and
+the committed per-query records can be used to rebuild the tables with `make tables`.

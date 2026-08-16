@@ -248,9 +248,9 @@
 |:---------------------------------|:----------|-------------:|---------------:|--------------:|---------------:|
 | frozen_primary_protocol          | original  |       0.4572 |         0.4586 |     1752.4284 |      1455.1354 |
 | frozen_primary_protocol          | proposed  |       0.4747 |         0.4695 |      728.8784 |       673.1993 |
-| published_prompt_and_integration | hyde      |       0.2956 |         0.4746 |     7918.3498 |      7536.6225 |
-| published_prompt_and_integration | mugi      |       0.3264 |         0.5109 |     1409.0139 |      1406.3202 |
-| published_prompt_and_integration | query2doc |       0.3461 |         0.5229 |      864.9801 |       857.8034 |
+| published_prompt_and_integration | hyde      |       0.4114 |         0.4374 |     8588.7731 |      8080.0248 |
+| published_prompt_and_integration | mugi      |       0.4584 |         0.4596 |     1396.6025 |      1393.4694 |
+| published_prompt_and_integration | query2doc |       0.4728 |         0.4675 |      892.3068 |       879.2349 |
 
 ## 消融与敏感性
 

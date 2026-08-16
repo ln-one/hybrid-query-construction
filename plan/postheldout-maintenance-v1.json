@@ -1,11 +1,14 @@
 {
   "approved_protocol_file_sha256": {
+    "plan/project-overview.md": "416703b7fe94259f9aa9525c5390f6872f04c0b4f4e947a9b1df74a85aba4821",
     "plan/progress.md": "892418b00362619cf85eb8deb5ea91cd9d62cca84e2a7590459cf858e1fab841",
+    "plan/review/method-experiment-traceability.md": "cd9e9827aa0f40bac14929772a964b29161573e02b036b5ef586f02214ff7c30",
     "src/hybrid_query_construction/locking.py": "4b76f95664fd42a6bef19952ef33439583a768f05f346f53549274881bd3f9d2",
-    "src/hybrid_query_construction/reporting.py": "43d8c8de52dcee8b21de0f09ce367b488752feec0e958baa2a7d3ca9ae7ea19b"
+    "src/hybrid_query_construction/reporting.py": "470389f36701ce2f22de2f1a10284e93ef2a7d31061e6c55bac82b528d2c8e83",
+    "src/hybrid_query_construction/verification.py": "de92eb7beddf568afaa84c08bcfe0e85686777e1c819af4b8cf0691a87aae25c"
   },
   "frozen_experiment_commit": "ec605a35a22693b65ca98f7448ca2954ea6bcfed",
   "preheldout_lock_sha256": "74950b9c8103c1997581effc59e565ec1b92488d7f880a5aee4a44f48c9608df",
-  "reason": "Post-evaluation maintenance only. The verifier accepts SQLite physical layout changes only when the locked manifest and complete logical ranking digest still match. The report generator now renders the already-frozen robustness, scale, fidelity, ablation, fixed-Top-L, development, and negative-condition results in REPORT.md. The progress file now records the completed post-evaluation state. None of these changes alter generation, retrieval, fusion, replay, metrics, statistics, or any result record.",
+  "reason": "Reporting maintenance over the frozen seven-dataset results. Generation, retrieval, fusion, replay, metrics, and result records are unchanged.",
   "schema_version": 1
 }

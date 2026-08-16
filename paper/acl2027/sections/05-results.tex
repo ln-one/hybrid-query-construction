@@ -23,19 +23,20 @@ The fixed cutoff changes 6.95\% of nDCG judgments and 18.84\% of Recall
 judgments. Strict gain--loss reversals account for 3.07\% and 3.06\%,
 respectively. Thus, a practical fixed cutoff can change whether expansion is
 judged beneficial for an individual query, rather than merely perturbing the
-ranking. Results for other cutoffs, complete macro curves, and ordered Top-20
-agreement are reported in Appendix Tables~\ref{tab:fixed-l}
-and~\ref{tab:cutoff-query-diagnostics}.
+ranking. Results for other cutoffs and ordered top-20 agreement are reported in
+Appendix Table~\ref{tab:cutoff-query-diagnostics}.
 
 \subsection{Retrieval Effectiveness and Access Depth}
 
-Under complete-list fusion, DESA obtains the highest macro nDCG@10 and
+Table~\ref{tab:main-results} summarizes the controlled comparison. Under
+complete-list fusion, DESA obtains the highest macro nDCG@10 and
 Recall@20 in the seven-dataset controlled comparison, reaching .4747 and
 .4695. Relative to Original, these values correspond to gains of 3.82\% and
-2.38\%. The equal-dataset averages of the within-dataset depth reductions are
-36.90\% for Dense and 36.56\% for Sparse. The mean proportion of queries that
-become shallower in both channels is 63.31\%. All four improvements remain
-significant after Holm correction ($p_{\mathrm{Holm}}=.0004$).
+2.38\%. The equal-dataset averages of the within-dataset replay stopping-depth
+reductions are 36.90\% and 36.56\% for the dense and sparse channels. The mean
+proportion of queries that become shallower in both channels is 63.31\%. All
+four improvements remain significant after Holm correction
+($p_{\mathrm{Holm}}=.0004$).
 
 \begin{table}[H]
 \centering
@@ -45,10 +46,10 @@ significant after Holm correction ($p_{\mathrm{Holm}}=.0004$).
 \toprule
 Method & nDCG@10 $\uparrow$ & Recall@20 $\uparrow$ & $L_D\downarrow$ & $L_S\downarrow$ \\
 \midrule
-\multicolumn{5}{l}{\textit{No expansion}} \\
+\multicolumn{5}{l}{\textit{Original query}} \\
 Original & 0.4572 & 0.4586 & 1752.4 & 1455.1 \\
 \addlinespace[1pt]
-\multicolumn{5}{l}{\textit{Symmetric expansion}} \\
+\multicolumn{5}{l}{\textit{Shared expansion}} \\
 Shared & 0.4671 & 0.4666 & \textbf{607.4} & \textbf{606.7} \\
 \addlinespace[1pt]
 \multicolumn{5}{l}{\textit{Single-channel construction}} \\
@@ -69,14 +70,14 @@ in the text are computed within each dataset before macro-averaging.}
 Compared with Shared expansion, DESA improves macro nDCG by 1.61\% and Recall
 by 0.61\%. The absolute nDCG difference is $+.0075$ and remains significant
 after correction ($p_{\mathrm{Holm}}=.0012$). The Recall difference is $+.0028$
-($p_{\mathrm{Holm}}=.2736$), while the differences in Dense and Sparse depth
+($p_{\mathrm{Holm}}=.2736$), while the differences in dense and sparse depth
 are also nonsignificant. DESA therefore provides a significant nDCG advantage
 over Shared expansion.
 
-NFCorpus illustrates the effect of Sparse anchoring. Shared expansion increases
-the mean Sparse support from 561.5 to 3211.6 documents and raises Sparse
-stopping depth by 105.82\% relative to Original. DESA preserves the original
-support size and reduces Sparse depth by 23.15\%, while also reducing Dense
+NFCorpus illustrates the effect of sparse anchoring. Shared expansion increases
+the mean sparse support from 561.5 to 3211.6 documents and raises the sparse
+stopping depth by 105.81\% relative to Original. DESA preserves the original
+support size and reduces sparse depth by 23.15\%, while also reducing dense
 depth by 15.03\%. Anchoring allows generated terms to improve the ordering of
 originally matched documents without expanding the lexical support.
 
@@ -169,13 +170,13 @@ degradation.}
 
 The $2\times2$ experiment shows that the two channel operators are
 complementary. Dense residual expansion alone improves nDCG and Recall by
-1.08\% and 1.11\%, with Dense and Sparse depth reductions of 8.16\% and 7.49\%.
-Sparse anchoring alone produces larger quality gains of 3.11\% and 2.01\%,
+1.08\% and 1.11\%, with dense and sparse depth reductions of 8.16\% and 7.49\%.
+Sparse anchoring alone produces larger effectiveness gains of 3.11\% and 2.01\%,
 together with depth reductions of 28.77\% and 27.74\%. Combining both operators
-gives the full DESA gains of 3.82\% and 2.38\%, while reducing Dense and Sparse
+gives the full DESA gains of 3.82\% and 2.38\%, while reducing dense and sparse
 depth by 36.90\% and 36.56\%.
 
-Sparse anchoring contributes most of the quality gain, while Dense residual
+Sparse anchoring contributes most of the effectiveness gain, while dense residual
 expansion further reduces access depth. Their isolated controls produce only
 small differences, whereas the complete channel-asymmetric construction
 significantly outperforms Shared expansion in nDCG. DESA's advantage therefore
@@ -183,18 +184,18 @@ comes from combining the two channel-specific operations.
 
 Table~\ref{tab:channel-evidence} connects the two operators to their
 channel-specific outcomes on each dataset. DESA improves nDCG@10 over Original
-on all seven datasets. Adding Sparse anchoring to Dense-only improves all seven,
-while adding Dense residual expansion to Sparse-only improves six; FiQA is the
-sole exception at $-0.66\%$. Under DESA, both replay depths decrease on every
-dataset. Shared expansion broadens the positive-score Sparse support by up to
+on all seven datasets. Adding sparse anchoring to Dense only improves all seven,
+while adding dense residual expansion to Sparse only improves six; FiQA is the
+sole exception at $-0.66\%$. Under DESA, both replay stopping depths decrease on every
+dataset. Shared expansion broadens the positive-score sparse support by up to
 $5.72\times$, whereas DESA retains the Original support exactly on six datasets
 and by 99.9999\% on Touch\'e-2020, where the exported tail omits 25 extremely
 low-scoring document occurrences.
 
-The cross-dataset pattern makes the division of labor explicit: Sparse
-anchoring supplies the more consistent effectiveness gain, while Dense
+The cross-dataset pattern makes the division of labor explicit: sparse
+anchoring supplies the more consistent effectiveness gain, while dense
 residual expansion adds complementary gains on most datasets. Together, they
-improve retrieval without broadening Sparse support and reduce the ranked
+improve retrieval without broadening sparse support and reduce the ranked
 evidence required by both channels. Detailed angle, turnover, relevant-rank,
 and operator-control diagnostics are reported in
 Appendix~\ref{sec:appendix-mechanism}.
@@ -204,19 +205,20 @@ reported in Appendix~\ref{sec:appendix-analysis}.
 
 \subsection{Comparison with Recent and Prior Methods}
 
-Under matched generated evidence, QuDAR-simple RRF obtains 0.4761 nDCG and
+Under matched generated references, QuDAR-simple RRF obtains 0.4761 nDCG and
 0.4714 Recall, compared with 0.4747 and 0.4695 for DESA. Neither paired difference
-is significant after correction. QuDAR-simple fuses four Top-1000 rankings,
-corresponding to 4,000 rank entries per query. DESA requires a mean of 1,402.1
-entries to certify its fused result under the replay policy, a reduction of
-64.95\%. The upper block of Table~\ref{tab:fidelity} therefore shows comparable
-retrieval quality with substantially less fusion-side ranking access.
+is significant after correction. After accounting for finite sparse lists,
+QuDAR-simple fuses a mean of 3,911.5 available entries across its four
+top-1000-capped rankings. DESA requires a mean of 1,402.1 entries to certify its
+fused result under the replay policy, a 64.16\% reduction in equal-dataset mean
+entry count (Table~\ref{tab:fidelity}).
 
-On the common four-dataset subset, DESA improves nDCG and Recall over HyDE by
-16.58\% and 10.78\%, while reducing both stopping depths by about 91\%.
-Relative to MuGI, the quality gains are 5.58\% and 2.92\%, and Dense and Sparse
-depths decrease by 50.22\% and 51.77\%. DESA therefore outperforms both methods
-in retrieval quality and ranking access under the shared evaluation protocol.
+Across all seven datasets, DESA's macro nDCG and Recall exceed HyDE's by
+15.39\% and 7.32\%. Averaging percentage reductions within datasets, its dense
+and sparse stopping depths are 80.48\% and 80.26\% lower. Relative to MuGI, the
+macro effectiveness gains are 3.56\% and 2.15\%, and the corresponding depth
+reductions are 24.36\% and 37.21\%. These comparisons show higher mean
+effectiveness and lower mean access depths.
 
 \begin{table}[t]
 \centering
@@ -226,33 +228,30 @@ in retrieval quality and ranking access under the shared evaluation protocol.
 \toprule
 Method & nDCG@10 $\uparrow$ & Recall@20 $\uparrow$ & Entries $\downarrow$ \\
 \midrule
-\multicolumn{4}{l}{\textit{Matched evidence, seven datasets}} \\
-QuDAR-simple & \textbf{0.4761} & \textbf{0.4714} & \underline{4000.0} \\
+\multicolumn{4}{l}{\textit{Matched references, seven datasets}} \\
+QuDAR-simple & \textbf{0.4761} & \textbf{0.4714} & \underline{3911.5} \\
 DESA         & \underline{0.4747} & \underline{0.4695} & \textbf{1402.1} \\
 \addlinespace[1pt]
-\multicolumn{4}{l}{\textit{Prior query expansion, four datasets}} \\
-No expansion & 0.3325 & 0.5142 & 2506.6 \\
-HyDE         & 0.2956 & 0.4746 & 15454.9 \\
-MuGI         & 0.3264 & 0.5109 & 2815.3 \\
-Query2doc    & \textbf{0.3461} & \underline{0.5229} & \underline{1722.8} \\
-DESA         & \underline{0.3446} & \textbf{0.5258} & \textbf{1379.7} \\
+\multicolumn{4}{l}{\textit{Prior query expansion, seven datasets}} \\
+Original     & 0.4572 & 0.4586 & 3207.6 \\
+HyDE         & 0.4114 & 0.4374 & 16668.8 \\
+MuGI         & 0.4584 & 0.4596 & 2790.1 \\
+Query2doc    & \underline{0.4728} & \underline{0.4675} & \underline{1771.5} \\
+DESA         & \textbf{0.4747} & \textbf{0.4695} & \textbf{1402.1} \\
 \bottomrule
 \end{tabular}
-\caption{External comparisons under two explicitly separated evaluation
-subsets. Rank entries are the four fixed Top-1000 lists for QuDAR-simple and
-$L_D+L_S$ for the two-channel methods.}
+\caption{External comparisons over the same seven evaluation datasets.
+Rank entries are the available items in QuDAR-simple's four
+top-1000-capped lists and $L_D+L_S$ for the two-channel methods.}
 \label{tab:fidelity}
 \end{table}
 
-In the lower block, Query2doc has 0.45\% higher nDCG, whereas DESA has 0.57\%
-higher Recall. DESA
-also reduces Dense and Sparse stopping depths by 18.90\% and 20.93\%. The two
-methods have similar retrieval quality, but DESA requires less ranking evidence
-to determine the fused result.
+In the lower block, DESA has 0.40\% higher nDCG and 0.43\% higher Recall than
+Query2doc, with 11.85\% and 23.28\% lower dense and sparse stopping depths.
 
 \subsection{Robustness and Failure Boundary}
 
-DESA retains its quality gains across the tested generator, Dense encoder, and
+DESA retains its effectiveness gains across the tested generator, dense encoder, and
 corpus sizes. Access depth decreases in most settings, with Contriever on
 Touch\'e-2020 as the only observed failure case. Detailed generator, encoder,
 and corpus-scale results are reported in Appendix~\ref{sec:additional-results}.

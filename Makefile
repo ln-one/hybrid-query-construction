@@ -1,4 +1,4 @@
-.PHONY: setup tiny test lint verify tables clean-rebuild generate-qwen generate-robustness prepare-models compatibility formal-preheldout formal-evaluate
+.PHONY: setup tiny test lint verify tables clean-rebuild generate-qwen generate-robustness prepare-models compatibility formal-freeze formal-report formal-preheldout formal-evaluate
 
 setup:
 	uv sync --extra dev
@@ -36,6 +36,10 @@ formal-preheldout:
 
 formal-evaluate:
 	./scripts/run_formal_evaluation.sh
+
+formal-freeze: formal-preheldout
+
+formal-report: formal-evaluate
 
 verify: test lint
 	uv run hqc verify --root .

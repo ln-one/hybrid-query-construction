@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "figures"))
 
-from qudar_style import COLORS, apply_style, finish_axis, save_figure
+from qudar_style import COLORS, apply_style, finish_axis, save_figure  # noqa: E402
 
 DATA = ROOT / "figures" / "data" / "mechanism-distributions.csv"
 ORDER = (

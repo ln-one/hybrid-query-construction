@@ -15,7 +15,10 @@ own complete-list fused Top-20.
 - Seven formal datasets are reported individually and with equal macro weight.
 - Every reported value must be recoverable from per-query records.
 
-## Frozen decisions
+## Current reporting decisions
+
+The public report pools all seven datasets with equal weight. The reporting
+scope is recorded in `plan/reporting-protocol-v2.md`.
 
 - Primary generator: Qwen2.5-7B-Instruct, three draws.
 - Robustness generator: Mistral-7B-Instruct-v0.3, 100 hash-selected queries per selected set.
