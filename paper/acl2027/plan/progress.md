@@ -336,3 +336,116 @@ name, affiliation, location, and contact email; the ACL build remains anonymous.
   after the Section 5.2 result statement.
 - Regenerated the PDF/SVG/PNG figure, rebuilt the anonymous paper at 14 pages,
   and visually checked pages 5--7 for column flow, legibility, and float order.
+
+### Capability-use audit: figure/table literature audit, 2026-08-16
+
+- Stage: S3 experiment/result design and S5 evidence review.
+- Required skills: research-writing workflow, paper orchestration, experiment
+  results planning, PDF inspection, and peer review.
+- Skills actually used: all required skills. No subagent was used because the
+  workspace instructions prohibit delegation unless the author requests it.
+- Inputs consumed: official ACL Anthology PDFs for QuDAR, Weller et al., MuGI,
+  and Exp4Fuse; the current 14-page manuscript rendering; figure/table source
+  references; evidence and traceability plans; and frozen result CSVs.
+- Inputs not used and why: no additional RAG papers were added after the four
+  references covered adaptive fusion, expansion failure analysis, integration
+  ablations, and fusion-framework presentation without adding a new visual
+  design pattern.
+- Artifacts produced:
+  `plan/task-packets/figure-table-literature-audit-2026-08-16.md` and
+  `plan/review/figure-table-literature-audit-2026-08-16.md`.
+- Verification run: official PDFs were rendered and inspected; all current
+  figure/table references were enumerated; the proposed cross-dataset pattern
+  was recomputed from `report/main-results.csv`. DESA exactly preserves the
+  Original Sparse support on six datasets and retains 99.9999\% on
+  Touch\'e-2020, while Shared expansion ranges from 1.003 to 5.72 times the
+  Original support; DESA exceeds Shared nDCG on six of seven datasets.
+- Remaining risk: a support-size figure must not be described as a latency
+  result or as universal Sparse-depth improvement over Shared expansion.
+
+### Double-column channel-evidence table, 2026-08-16
+
+- Stage: S3 Results and S5 evidence presentation.
+- Replaced the rejected quality--access Figure 4 with a full-width evidence
+  table that reports the per-dataset pattern behind the channel-asymmetry
+  claim rather than repeating the macro comparison in Table 1.
+- The table groups three kinds of evidence: relative nDCG changes that isolate
+  the contribution of each operator, Dense/Sparse replay-depth reductions
+  relative to Original, and Sparse-support ratios for Shared expansion and
+  DESA. Pastel group headers and restrained cell colors follow the compact ACL
+  table style used in the reference papers; the sole negative operator effect
+  is marked in red.
+- The summary row states the auditable pattern directly: DESA improves over
+  Original on 7/7 datasets; adding Sparse anchoring to Dense expansion helps on
+  7/7; adding Dense residual expansion to Sparse anchoring helps on 6/7; and
+  both replay depths decrease on 7/7 under the primary BGE setting.
+- Updated `figures/data-manifest.md` and `tables/table-schema.md`; moved the
+  earlier mechanism boxplot to appendix status and removed the rejected,
+  unreferenced Figure 4 assets from the formal figure directories. Prototype
+  artifacts remain under `tmp/` for comparison.
+- Verification run: both anonymous and arXiv builds complete at 14 pages; the
+  final LaTeX logs contain no errors, undefined references, or overfull boxes.
+  Pages 6--8 were rendered and visually inspected for table width, text
+  overflow, float order, and column balance.
+- Layout follow-up: moved the unchanged two-column table declaration to the
+  beginning of Section 5.3 and strengthened its top-float preference. It now
+  appears at the top of page 7, immediately after its discussion and first
+  reference on page 6, rather than being delayed to page 8.
+- Remaining risk: replay depth remains a logical access measure, not end-to-end
+  latency, and the Contriever/Touch\'e-2020 access failure remains stated
+  separately in the robustness discussion.
+
+### Conclusion review candidate, 2026-08-16
+
+- Stage: S4 drafting and S5 consistency review.
+- Prepared a read-only Section 6 review and replacement candidate; the
+  manuscript conclusion has not been changed pending author confirmation.
+- The candidate reduces abstract-level repetition and adds the two Results
+  findings needed for closure: the distinct roles of Sparse anchoring and Dense
+  residual expansion, and the matched QuDAR-simple quality/access comparison.
+- Required skills: research-writing workflow, paper orchestration, chapter
+  writing, and core academic writing. All were used; no subagent was used
+  because the author did not request delegation.
+- Inputs consumed: project overview, outline, abstract, Introduction, Results,
+  current Conclusion, and Limitations. No new literature was required because
+  the conclusion introduces no new external claim.
+- Artifacts produced: `plan/task-packets/conclusion-review-2026-08-16.md` and
+  `plan/review/conclusion-review-2026-08-16.md`.
+- Verification run: every number and qualifier in the candidate was checked
+  against the current Results and Limitations sections.
+- Remaining risk: the QuDAR sentence must remain explicitly limited to the
+  reconstructable QuDAR-simple RRF comparison, and replay depth must not be
+  presented as wall-clock latency.
+
+- Author annotation follow-up: the first candidate was rejected as weakly
+  narrated and too defensive. A second candidate now opens with the empirical
+  channel-asymmetry finding, treats complete-list replay as supporting method
+  rather than the main story, and ends on the Dense-expands/Sparse-anchors
+  design principle. Failure and deployment qualifications are left to the
+  adjacent Limitations section instead of dominating the conclusion.
+- Closing-line follow-up: revised the candidate to end explicitly with the
+  paper's title-level formulation, `Dense expands; Sparse anchors.`
+- Full-section follow-up: the author found the standalone slogan abrupt and
+  requested the complete Section 6 with Chinese translation. The new
+  three-paragraph candidate derives the slogan from a final implication
+  paragraph and records aligned English and Chinese versions in the review
+  artifact; the manuscript remains unchanged pending confirmation.
+- Author approval: the three-paragraph Conclusion was written back to
+  `sections/06-conclusion.tex`. It now closes on a derived division-of-labor
+  statement, `Dense expands, while Sparse anchors`, while detailed failure and
+  deployment boundaries remain in the following Limitations section.
+
+### Limitations compression candidate, 2026-08-16
+
+- Stage: S6 author-approved writeback and verification.
+- The current 274-word section is over-defensive. The proposed replacement
+  retains only three claim boundaries: empirical scope, the distinction
+  between replay depth and wall-clock latency, and generated-evidence/qrel
+  uncertainty. QuDAR- and MuGI-specific reproduction details remain where they
+  are already documented in Results, Experiments, and the appendix.
+- Author approval: the two-paragraph candidate was written back to
+  `sections/07-limitations.tex` for final LaTeX and layout verification.
+- Verification: the section is 100 words (down from 274); both review and
+  arXiv builds compile to 14 pages with no LaTeX errors, undefined references,
+  or overfull boxes. Page 8 was rendered and visually checked: the unnumbered
+  heading, two paragraphs, and adjacent References column fit cleanly.

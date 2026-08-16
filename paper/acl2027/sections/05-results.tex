@@ -43,7 +43,7 @@ significant after Holm correction ($p_{\mathrm{Holm}}=.0004$).
 \setlength{\tabcolsep}{3.2pt}
 \begin{tabular}{lrrrr}
 \toprule
-Method & nDCG@10 & Recall@20 & $L_D$ & $L_S$ \\
+Method & nDCG@10 $\uparrow$ & Recall@20 $\uparrow$ & $L_D\downarrow$ & $L_S\downarrow$ \\
 \midrule
 \multicolumn{5}{l}{\textit{No expansion}} \\
 Original & 0.4572 & 0.4586 & 1752.4 & 1455.1 \\
@@ -82,6 +82,91 @@ originally matched documents without expanding the lexical support.
 
 \subsection{Contributions of the Channel Operators}
 
+\begingroup
+\definecolor{effhead}{HTML}{DCEFEA}
+\definecolor{accesshead}{HTML}{E2E7F5}
+\definecolor{supporthead}{HTML}{FAEDC9}
+\definecolor{positive}{HTML}{E7F5F0}
+\definecolor{negative}{HTML}{F3D4CE}
+\definecolor{access}{HTML}{EBEEF9}
+\definecolor{broaden}{HTML}{FFF2CF}
+\definecolor{preserve}{HTML}{DDF2E9}
+\definecolor{pattern}{HTML}{EEF0F2}
+\newcommand{\effcell}[1]{\colorbox{positive}{\strut\makebox[3.25em][c]{#1}}}
+\newcommand{\negcell}[1]{\colorbox{negative}{\strut\makebox[3.25em][c]{\textbf{#1}}}}
+\newcommand{\accesscell}[1]{\colorbox{access}{\strut\makebox[3.25em][c]{#1}}}
+\newcommand{\broadcell}[1]{\colorbox{broaden}{\strut\makebox[3.65em][c]{#1}}}
+\newcommand{\keepcell}[1]{\colorbox{preserve}{\strut\makebox[3.65em][c]{#1}}}
+\newcommand{\patterncell}[1]{\colorbox{pattern}{\strut\scriptsize\textbf{#1}}}
+\begin{table*}[t!]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.0pt}
+\renewcommand{\arraystretch}{1.20}
+\begin{tabular}{lrrrrrrr}
+\toprule
+& \multicolumn{3}{c}{\colorbox{effhead}{\strut\textbf{Effectiveness: relative $\Delta$nDCG@10 (\%)}}}
+& \multicolumn{2}{c}{\colorbox{accesshead}{\strut\textbf{Access reduction vs. Original (\%)}}}
+& \multicolumn{2}{c}{\colorbox{supporthead}{\strut\textbf{Sparse support ($\times$ Original)}}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+\textbf{Dataset}
+& \textbf{DESA vs. Orig.}
+& \textbf{+Dense given Sparse}
+& \textbf{+Sparse given Dense}
+& $\boldsymbol{L_D}$
+& $\boldsymbol{L_S}$
+& \textbf{Shared}
+& \textbf{DESA} \\
+\midrule
+SciFact
+& \effcell{+2.40} & \effcell{+1.12} & \effcell{+0.91}
+& \accesscell{22.2} & \accesscell{20.9}
+& \broadcell{1.62$\times$} & \keepcell{1.00$\times$} \\
+NFCorpus
+& \effcell{+3.37} & \effcell{+2.14} & \effcell{+1.36}
+& \accesscell{15.0} & \accesscell{23.2}
+& \broadcell{\textbf{5.72$\times$}} & \keepcell{1.00$\times$} \\
+TREC-COVID
+& \effcell{+5.69} & \effcell{+0.51} & \effcell{+4.68}
+& \accesscell{74.9} & \accesscell{66.7}
+& \broadcell{1.53$\times$} & \keepcell{1.00$\times$} \\
+FiQA
+& \effcell{+3.61} & \negcell{$-$0.66} & \effcell{+3.74}
+& \accesscell{49.7} & \accesscell{48.7}
+& \broadcell{1.64$\times$} & \keepcell{1.00$\times$} \\
+ArguAna
+& \effcell{+1.27} & \effcell{+0.32} & \effcell{+0.88}
+& \accesscell{15.2} & \accesscell{15.3}
+& \broadcell{1.00$\times$} & \keepcell{1.00$\times$} \\
+Touch\'e-2020
+& \effcell{+7.52} & \effcell{+0.92} & \effcell{+5.70}
+& \accesscell{45.8} & \accesscell{45.8}
+& \broadcell{1.88$\times$} & \keepcell{1.00$\times$} \\
+SCIDOCS
+& \effcell{+0.86} & \effcell{+0.03} & \effcell{+0.13}
+& \accesscell{35.4} & \accesscell{35.4}
+& \broadcell{2.02$\times$} & \keepcell{1.00$\times$} \\
+\midrule
+\textbf{Pattern}
+& \patterncell{7/7 improve}
+& \patterncell{6/7 improve}
+& \patterncell{7/7 improve}
+& \patterncell{7/7 shallower}
+& \patterncell{7/7 shallower}
+& \patterncell{up to 5.72$\times$}
+& \patterncell{$\approx$1.00$\times$} \\
+\bottomrule
+\end{tabular}
+\caption{Per-dataset evidence for channel-asymmetric construction.
+Effectiveness columns report relative nDCG@10 changes; +Dense and +Sparse
+compare DESA with the corresponding one-operator construction. Access columns
+report replay-depth reductions from Original, where positive values indicate
+shallower access. Sparse support is normalized by Original; red marks the sole
+degradation.}
+\label{tab:channel-evidence}
+\end{table*}
+\endgroup
+
 The $2\times2$ experiment shows that the two channel operators are
 complementary. Dense residual expansion alone improves nDCG and Recall by
 1.08\% and 1.11\%, with Dense and Sparse depth reductions of 8.16\% and 7.49\%.
@@ -96,41 +181,36 @@ small differences, whereas the complete channel-asymmetric construction
 significantly outperforms Shared expansion in nDCG. DESA's advantage therefore
 comes from combining the two channel-specific operations.
 
-The observed rankings confirm the intended channel behavior
-(Figure~\ref{fig:mechanism-distributions}). Across 11,327 query and
-generation-draw pairs, the mean Dense angle is $11.98^\circ$, and the maximum
-is $27.87^\circ$, below the analytic $45^\circ$ bound. Sparse anchoring changes
-26.15\% of the original Sparse Top-20 on average.
+Table~\ref{tab:channel-evidence} connects the two operators to their
+channel-specific outcomes on each dataset. DESA improves nDCG@10 over Original
+on all seven datasets. Adding Sparse anchoring to Dense-only improves all seven,
+while adding Dense residual expansion to Sparse-only improves six; FiQA is the
+sole exception at $-0.66\%$. Under DESA, both replay depths decrease on every
+dataset. Shared expansion broadens the positive-score Sparse support by up to
+$5.72\times$, whereas DESA retains the Original support exactly on six datasets
+and by 99.9999\% on Touch\'e-2020, where the exported tail omits 25 extremely
+low-scoring document occurrences.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_mechanism_distributions.pdf}
-\caption{Realized behavior of the two channel operators over three generation
-draws on seven datasets. Dense angles are measured from the original query;
-Sparse turnover is one minus Top-20 overlap with the original sparse ranking.
-Boxes show the interquartile range and median; whiskers extend to 1.5 times the
-interquartile range, with outliers omitted.}
-\label{fig:mechanism-distributions}
-\end{figure}
-
-Relevant-document
-reciprocal-rank gain correlates more strongly with Sparse-only nDCG gain than
-overall Top-20 turnover does (.391 vs.\ .078). Sparse anchoring therefore
-improves retrieval by promoting relevant documents within the original support,
-while Dense residual expansion adds semantic evidence without excessive drift.
+The cross-dataset pattern makes the division of labor explicit: Sparse
+anchoring supplies the more consistent effectiveness gain, while Dense
+residual expansion adds complementary gains on most datasets. Together, they
+improve retrieval without broadening Sparse support and reduce the ranked
+evidence required by both channels. Detailed angle, turnover, relevant-rank,
+and operator-control diagnostics are reported in
+Appendix~\ref{sec:appendix-mechanism}.
 
 Additional binary-mask, reference-count, and operator-control results are
 reported in Appendix~\ref{sec:appendix-analysis}.
 
 \subsection{Comparison with Recent and Prior Methods}
 
-Under matched generated evidence, QuDAR-simple RRF obtains .4761 nDCG and
-.4714 Recall, compared with .4747 and .4695 for DESA. Neither paired difference
+Under matched generated evidence, QuDAR-simple RRF obtains 0.4761 nDCG and
+0.4714 Recall, compared with 0.4747 and 0.4695 for DESA. Neither paired difference
 is significant after correction. QuDAR-simple fuses four Top-1000 rankings,
 corresponding to 4,000 rank entries per query. DESA requires a mean of 1,402.1
 entries to certify its fused result under the replay policy, a reduction of
-64.95\%. DESA therefore matches the retrieval quality of the rank-based QuDAR
-variant with substantially less fusion-side ranking access.
+64.95\%. The upper block of Table~\ref{tab:fidelity} therefore shows comparable
+retrieval quality with substantially less fusion-side ranking access.
 
 On the common four-dataset subset, DESA improves nDCG and Recall over HyDE by
 16.58\% and 10.78\%, while reducing both stopping depths by about 91\%.
@@ -140,25 +220,32 @@ in retrieval quality and ranking access under the shared evaluation protocol.
 
 \begin{table}[t]
 \centering
-\small
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{lrrrr}
+\scriptsize
+\setlength{\tabcolsep}{2.4pt}
+\begin{tabular}{lrrr}
 \toprule
-Method & nDCG@10 & Recall@20 & $L_D$ & $L_S$ \\
+Method & nDCG@10 $\uparrow$ & Recall@20 $\uparrow$ & Entries $\downarrow$ \\
 \midrule
-No expansion & .3325 & .5142 & 1278.2 & 1228.4 \\
-HyDE         & .2956 & .4746 & 7918.3 & 7536.6 \\
-MuGI         & .3264 & .5109 & 1409.0 & 1406.3 \\
-Query2doc    & \textbf{.3461} & .5229 & 865.0 & 857.8 \\
-DESA         & .3446 & \textbf{.5258} & \textbf{701.5} & \textbf{678.2} \\
+\multicolumn{4}{l}{\textit{Matched evidence, seven datasets}} \\
+QuDAR-simple & \textbf{0.4761} & \textbf{0.4714} & \underline{4000.0} \\
+DESA         & \underline{0.4747} & \underline{0.4695} & \textbf{1402.1} \\
+\addlinespace[1pt]
+\multicolumn{4}{l}{\textit{Prior query expansion, four datasets}} \\
+No expansion & 0.3325 & 0.5142 & 2506.6 \\
+HyDE         & 0.2956 & 0.4746 & 15454.9 \\
+MuGI         & 0.3264 & 0.5109 & 2815.3 \\
+Query2doc    & \textbf{0.3461} & \underline{0.5229} & \underline{1722.8} \\
+DESA         & \underline{0.3446} & \textbf{0.5258} & \textbf{1379.7} \\
 \bottomrule
 \end{tabular}
-\caption{Equal-dataset macro comparison with prior query expansion methods
-on the common four-dataset subset.}
+\caption{External comparisons under two explicitly separated evaluation
+subsets. Rank entries are the four fixed Top-1000 lists for QuDAR-simple and
+$L_D+L_S$ for the two-channel methods.}
 \label{tab:fidelity}
 \end{table}
 
-Query2doc has 0.45\% higher nDCG, whereas DESA has 0.57\% higher Recall. DESA
+In the lower block, Query2doc has 0.45\% higher nDCG, whereas DESA has 0.57\%
+higher Recall. DESA
 also reduces Dense and Sparse stopping depths by 18.90\% and 20.93\%. The two
 methods have similar retrieval quality, but DESA requires less ranking evidence
 to determine the fused result.

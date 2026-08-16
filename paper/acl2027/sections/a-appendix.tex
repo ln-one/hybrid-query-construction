@@ -130,6 +130,7 @@ ranking is unchanged. Multiplying $s_o$ or $s_r$ by a positive global constant
 only rescales every anchored score and likewise leaves the ranking unchanged.
 
 \subsection{Mechanism Diagnostics}
+\label{sec:appendix-mechanism}
 
 Table~\ref{tab:mechanism-diagnostics} reports the quantities used to inspect
 the realized operators. Dense angle is measured between the original and
@@ -162,6 +163,23 @@ and rankings. Support retained is the mean per-query--draw fraction of the
 original sparse support; the displayed macro rounds to 100.0000\%.}
 \label{tab:mechanism-diagnostics}
 \end{table*}
+
+Figure~\ref{fig:mechanism-distributions} shows the query-level distributions
+behind the aggregate diagnostics. Across 11,327 query--draw pairs, the mean
+Dense angle is $11.98^\circ$ and the maximum is $27.87^\circ$, below the
+analytic $45^\circ$ bound. Sparse anchoring changes 26.15\% of the Original
+Sparse Top-20 on average.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_mechanism_distributions.pdf}
+\caption{Realized behavior of the two channel operators over three generation
+draws on seven datasets. Dense angles are measured from the Original query;
+Sparse turnover is one minus Top-20 overlap with the Original Sparse ranking.
+Boxes show the interquartile range and median; whiskers extend to 1.5 times the
+interquartile range, with outliers omitted.}
+\label{fig:mechanism-distributions}
+\end{figure}
 
 The within-dataset quartiles in Figure~\ref{fig:mechanism-bins} are not
 monotonic. Larger Dense angles do not consistently improve either nDCG or
