@@ -12,6 +12,15 @@ query without introducing expansion-only matches. The resulting Dense and
 Sparse rankings are fused into the final result. Figure~\ref{fig:desa-overview}
 summarizes this design: Dense expands; Sparse anchors.
 
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/fig_desa_overview.pdf}
+  \caption{Design principle of DESA. The same generated evidence expands
+  Dense semantics but remains anchored to the original query's lexical support
+  in Sparse retrieval.}
+  \label{fig:desa-overview}
+\end{figure}
+
 \subsection{Complementary Evidence Generation}
 
 The generator is prompted to produce $n$ short passages that could plausibly
@@ -41,16 +50,6 @@ query--reference pair as unit vectors:
 
 The component of $\bar{\mathbf v}_r$ parallel to the original query is
 removed, and the remaining residual is added to $\mathbf v_o$:
-
-\newpage
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/fig_desa_overview.pdf}
-  \caption{Design principle of DESA. The same generated evidence expands
-  Dense semantics but remains anchored to the original query's lexical support
-  in Sparse retrieval.}
-  \label{fig:desa-overview}
-\end{figure}
 
 \[
 \mathbf z=
