@@ -12,15 +12,6 @@ query without introducing expansion-only matches. The resulting Dense and
 Sparse rankings are fused into the final result. Figure~\ref{fig:desa-overview}
 summarizes this design: Dense expands; Sparse anchors.
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/fig_desa_overview.pdf}
-  \caption{Design principle of DESA. The same generated evidence expands
-  Dense semantics but remains anchored to the original query's lexical support
-  in Sparse retrieval.}
-  \label{fig:desa-overview}
-\end{figure}
-
 \subsection{Complementary Evidence Generation}
 
 The generator is prompted to produce $n$ short passages that could plausibly
@@ -31,6 +22,16 @@ $q_o$. The prompt prohibits broader information needs and invented answers.
 The passages therefore vary in expression rather than intent, allowing the
 two retrieval channels to draw additional evidence from a shared expansion.
 The complete prompt and decoding settings are provided in Appendix~A.
+
+\newpage
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/fig_desa_overview.pdf}
+  \caption{Design principle of DESA. The same generated evidence expands
+  Dense semantics but remains anchored to the original query's lexical support
+  in Sparse retrieval.}
+  \label{fig:desa-overview}
+\end{figure}
 
 \subsection{Channel-Asymmetric Query Construction}
 
