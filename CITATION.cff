@@ -7,4 +7,4 @@ license: Apache-2.0
 authors:
   - family-names: Zhang
     given-names: Chunran
-repository-code: "https://github.com/ln-one/hybrid-query-construction"
+repository-code: "https://github.com/ln-one/dense-expands-sparse-anchors"
