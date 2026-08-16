@@ -26,9 +26,9 @@ tokens. Queries are sorted by identifier and processed in batches of eight.
 Each batch seed is derived from the protocol version, dataset, prompt hash, and
 batch index using the first 64 bits of their SHA-256 digest.
 
-The system prompt is:
+\begin{promptbox}{Prompt 1. Complementary Reference Generation}
+\textbf{System prompt}
 
-\begin{quote}\small
 You generate evidence-like reference passages for information retrieval.
 
 Given one search query, return exactly five concise, complementary passages
@@ -42,9 +42,14 @@ Return one single-line JSON array containing exactly five distinct strings.
 Count the five array items before responding. Do not output an object key,
 query identifier, Markdown, placeholders, or any other text. Every item must
 contain a substantive passage.
-\end{quote}
 
-The query is supplied as a canonical JSON object with one \texttt{query} field.
+\par\smallskip\hrule\smallskip
+\textbf{User input}\par
+\texttt{\{"query":"\{query\}"\}}
+\end{promptbox}
+
+The user input is serialized as a canonical JSON object with one
+\texttt{query} field.
 XGrammar 0.2.1 requires exactly five strings; validation rejects empty,
 duplicate, or placeholder passages. Invalid output is retried once with the
 same seed and validation feedback, then falls back to the unexpanded query.

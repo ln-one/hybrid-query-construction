@@ -17,6 +17,28 @@
 \usepackage{inconsolata}
 \usepackage{url}
 
+\newsavebox{\promptboxcontent}
+\newenvironment{promptbox}[1]{%
+  \par\smallskip
+  \begingroup
+  \def\promptboxtitle{#1}%
+  \setlength{\fboxsep}{0pt}%
+  \begin{lrbox}{\promptboxcontent}%
+  \begin{minipage}{\dimexpr\linewidth-2\fboxrule\relax}
+  \colorbox{black!55}{\makebox[\linewidth][l]{\hspace{6pt}%
+    \color{white}\bfseries\small\strut\promptboxtitle}}%
+  \par\vspace{6pt}
+  \hspace*{6pt}\begin{minipage}{\dimexpr\linewidth-12pt\relax}
+  \small\setlength{\parindent}{0pt}
+}{%
+  \end{minipage}\par\vspace{6pt}
+  \end{minipage}%
+  \end{lrbox}%
+  \noindent\fcolorbox{black!55}{black!2}{\usebox{\promptboxcontent}}%
+  \endgroup
+  \par\smallskip
+}
+
 \title{Dense Expands, Sparse Anchors: Channel-Asymmetric Query Expansion for Hybrid Retrieval}
 
 \ifdefined\ARXIVVERSION
