@@ -1,0 +1,24 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+A fixed top-$L$ cutoff limits how much of each channel ranking enters fusion
+and can change the measured gains and ordering of query expansion methods. We
+instead evaluate retrieval effectiveness with complete-list fusion and record
+the policy-specific per-channel replay depths at which the fused result is
+certified.
+DESA uses an LLM to generate complementary reference passages for
+channel-asymmetric query expansion.
+Orthogonal residual expansion adds their new semantic directions to the dense
+query, while score-product anchoring incorporates their lexical evidence
+through a document-wise score product without broadening the original query's
+lexical support.
+
+Across seven evaluation datasets, DESA improves nDCG@10 and Recall@20
+over the unexpanded query by 3.82\% and 2.38\%, with dense and sparse
+access-depth reductions of 36.90\% and 36.56\%. With datasets weighted equally,
+63.31\% of queries become shallower in both channels. This access benefit is
+not universal: depths increase with Contriever on Touch\'e-2020, and the
+reductions are non-monotonic across corpus sizes. Query expansion for hybrid
+retrieval should therefore integrate generated evidence according to each
+channel's matching mechanism and evaluate retrieval effectiveness together
+with access depth.

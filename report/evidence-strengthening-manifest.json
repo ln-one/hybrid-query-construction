@@ -1,0 +1,39 @@
+{
+  "datasets": [
+    "scifact",
+    "nfcorpus",
+    "trec-covid",
+    "fiqa",
+    "arguana",
+    "webis-touche2020",
+    "scidocs"
+  ],
+  "fixed_conclusions_sha256": "7e429bb4531f3aeb83370a4b6aae696a3c3540eb26f6cde523e8694a99aa40c9",
+  "fixed_diagnostics_sha256": "adb97221f19e6a70892be4f6ab5d095c3b3e8a16989493938c7dc87412e1b157",
+  "operator_controls_sha256": "4bcc02152212f816905d0160e45d6938879d85ae314e10c87f15c5268d2dea35",
+  "qudar_simple_rrf_matched_sha256": "5c4f13e7ed45b71c977ccbe6bcebaca19a5337dc0a137cffe8d5112fe3949302",
+  "qudar_specification": {
+    "expanded_signals": "DESA matched generated evidence",
+    "official_code_commit": "0702721e82799d0489850d3f94ac787da43436ad",
+    "official_repository": "https://github.com/kaist-dmlab/QuDAR",
+    "retrieval_depth_per_signal": 1000,
+    "rrf_constant": 60,
+    "signals": [
+      "OS",
+      "OD",
+      "ES",
+      "ED"
+    ],
+    "variant": "QuDAR-simple RRF"
+  },
+  "ranking_store_sha256": {
+    "arguana": "77b1e7d54bbe4d72bb833554e734fd97e4acf6f30a3c94d5bf6d2672607e09de",
+    "fiqa": "3d4e72a6d090eb7c9c0fa57e2dd938be161947af5bee94a300d34101bd030ede",
+    "nfcorpus": "be8c65368b19fbec79192f68ed2b7db23a557289877e3f19c74d039bd1ec9594",
+    "scidocs": "dd7ff6a4364e4e7784d671e03971f73c00987d41efa415a20c41e8713021822e",
+    "scifact": "450cd3da5e02e0f6770b6a912814579f11429398b9fcd1edbac4722a985423f9",
+    "trec-covid": "58a9c718489c260a311ebd91f7fff058044be5cf953b40b2b8b89ec521722d78",
+    "webis-touche2020": "43a5f41a0fbdd7e3991d01c3fa90b9333d65942b56f0d91e613751292e580991"
+  },
+  "schema_version": 1
+}

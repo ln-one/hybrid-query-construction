@@ -1,0 +1,53 @@
+{
+  "analysis": "desa-mechanism-v1",
+  "config_sha256": "51899d27b67ce13091be1f7ec1f0d9db3804dab04354a604aea4bdc7d2de08d2",
+  "dataset_aggregation": "equal-dataset macro mean",
+  "datasets": [
+    "scifact",
+    "nfcorpus",
+    "trec-covid",
+    "fiqa",
+    "arguana",
+    "webis-touche2020",
+    "scidocs"
+  ],
+  "dense_encoder": {
+    "max_length": 512,
+    "model_id": "BAAI/bge-small-en-v1.5",
+    "normalize_embeddings": true,
+    "query_instruction": "Represent this sentence for searching relevant passages: ",
+    "revision": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+    "similarity": "dot"
+  },
+  "draw_aggregation": "arithmetic mean within query",
+  "generation_source": "artifacts/generations/bridge/<dataset>.jsonl",
+  "outputs": {
+    "binned_effects": {
+      "path": "figures/data/mechanism-binned-effects.csv",
+      "sha256": "870be65f1a12e7b8978791e03c001053370c81c78d2a76a8382e786cc4508f5a"
+    },
+    "correlations": {
+      "path": "report/mechanism-correlations.csv",
+      "sha256": "36693924c480afd3eae078bc6ede488b7f6cf4156257c71d2df6f229e15f438b"
+    },
+    "distribution": {
+      "path": "figures/data/mechanism-distributions.csv",
+      "sha256": "f98cc6be9e1b7d433b44f44e2fbfae00e1bd0e9279a25e8e280f235f7ffb74e1"
+    },
+    "per_draw": {
+      "path": "report/mechanism-per-draw.csv",
+      "sha256": "496dd6c5d328160a57ddd4949a33cdabd22ae40a1bea65817fb24c8f4c2d1af3"
+    },
+    "per_query": {
+      "path": "report/mechanism-per-query.csv",
+      "sha256": "f8c93a6ef5fd534c4ea9192cbb31b154499e6070e9f7dc260f5587bbca36b7be"
+    },
+    "summary": {
+      "path": "report/mechanism-summary.csv",
+      "sha256": "06470f9ed2e61c38785fc893aaba7d1d43b267c716d0318429635e461de58c4b"
+    }
+  },
+  "ranking_source": "artifacts/rankings/<dataset>/rankings.sqlite3",
+  "result_source": "artifacts/results/raw/<dataset>.jsonl",
+  "schema_version": 1
+}

@@ -42,7 +42,7 @@ def _row(
     }
 
 
-def test_report_keeps_development_out_of_confirmatory_tables(tmp_path: Path) -> None:
+def test_report_includes_all_evaluation_datasets_in_primary_tables(tmp_path: Path) -> None:
     raw = tmp_path / "raw"
     rows = []
     for dataset in ("fiqa", "arguana", "webis-touche2020", "scidocs", "scifact"):
@@ -58,14 +58,18 @@ def test_report_keeps_development_out_of_confirmatory_tables(tmp_path: Path) -> 
     build_report(raw, output)
 
     main = pd.read_csv(output / "main-results.csv")
-    development = pd.read_csv(output / "development-results.csv")
     tests = pd.read_csv(output / "primary-paired-tests.csv")
     access_intervals = pd.read_csv(output / "access-macro-bootstrap.csv")
     method_intervals = pd.read_csv(output / "main-macro-bootstrap.csv")
     classifications = pd.read_csv(output / "outcome-classification.csv")
     report = (output / "REPORT.md").read_text(encoding="utf-8")
-    assert set(main["dataset"]) == {"fiqa", "arguana", "webis-touche2020", "scidocs"}
-    assert set(development["dataset"]) == {"scifact"}
+    assert set(main["dataset"]) == {
+        "fiqa",
+        "arguana",
+        "webis-touche2020",
+        "scidocs",
+        "scifact",
+    }
     assert len(tests) == 8
     assert set(access_intervals["dataset"]) == {"macro_equal_dataset"}
     assert set(access_intervals["metric"]) == {
@@ -85,13 +89,12 @@ def test_report_keeps_development_out_of_confirmatory_tables(tmp_path: Path) -> 
     }
     assert set(classifications["classification"]) <= {"强阳性", "混合", "负面"}
     for heading in (
-        "## Held-out 各数据集主结果",
+        "## 七个正式数据集主结果",
         "## 2×2 机制实验（数据集等权）",
         "## 公开方法完整复现",
         "## 消融与敏感性",
         "## 鲁棒性：第二生成模型与第二 Dense 编码器",
         "## 规模趋势",
-        "## 开发集机制检查（不用于 held-out 主结论）",
     ):
         assert heading in report
 

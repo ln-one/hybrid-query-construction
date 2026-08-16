@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="31.1.5" compressed="false">
+  <diagram id="desa-intuition" name="DESA intuition">
+    <mxGraphModel dx="490" dy="760" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="490" pageHeight="760" math="1" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="2" value="&lt;b&gt;(a) Dense expansion recovers missing semantics&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="8" width="450" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="Query A" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="25" y="48" width="100" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" value="How are various types of income taxed differently in the USA?" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ddd5eb;strokeColor=none;fontFamily=Consolas;fontSize=17;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="25" y="68" width="440" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="Generated references" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="25" y="120" width="180" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="&lt;font color=&quot;#5f9f3b&quot;&gt;&lt;b&gt;Capital gains&lt;/b&gt;&lt;/font&gt; are taxed separately from &lt;font color=&quot;#5f9f3b&quot;&gt;&lt;b&gt;ordinary income&lt;/b&gt;&lt;/font&gt;.&lt;br&gt;&lt;font color=&quot;#5f9f3b&quot;&gt;&lt;b&gt;Long-term capital gains&lt;/b&gt;&lt;/font&gt; depend on the holding period." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dceaf5;strokeColor=none;fontFamily=Consolas;fontSize=17;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=8;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="25" y="140" width="440" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="7" value="Relevant passage" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="25" y="213" width="170" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="8" value="Rank &lt;b&gt;271 &amp;#8594; 5&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;fontColor=#4f8731;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="330" y="213" width="135" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="9" value="... &lt;font color=&quot;#5f9f3b&quot;&gt;&lt;b&gt;Long-term capital gains&lt;/b&gt;&lt;/font&gt; are taxed below the marginal rate&lt;br&gt;and differ from &lt;font color=&quot;#5f9f3b&quot;&gt;&lt;b&gt;wage or ordinary income&lt;/b&gt;&lt;/font&gt; ..." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff0c9;strokeColor=none;fontFamily=Consolas;fontSize=17;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=8;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="25" y="233" width="440" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="10" value="Generated evidence supplies missing document language." style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=16;fontStyle=2;align=center;verticalAlign=middle;fontColor=#444444;" vertex="1" parent="1">
+          <mxGeometry x="35" y="304" width="420" height="26" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="11" value="" style="endArrow=none;dashed=1;dashPattern=6 5;html=1;strokeColor=#777777;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="25" y="345" as="sourcePoint"/>
+            <mxPoint x="465" y="345" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="12" value="&lt;b&gt;(b) Sparse anchoring preserves query evidence&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="358" width="450" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="13" value="Query B" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="25" y="396" width="100" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="14" value="How to find &lt;u&gt;&lt;b&gt;cheaper alternatives&lt;/b&gt;&lt;/u&gt; to a traditional &lt;u&gt;&lt;b&gt;home telephone line&lt;/b&gt;&lt;/u&gt;?" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ddd5eb;strokeColor=none;fontFamily=Consolas;fontSize=17;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="25" y="416" width="440" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="15" value="Generated references" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="25" y="468" width="180" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="16" value="Consider &lt;font color=&quot;#5f9f3b&quot;&gt;&lt;b&gt;VoIP services&lt;/b&gt;&lt;/font&gt; as a home-phone alternative.&lt;br&gt;Some &lt;font color=&quot;#5f9f3b&quot;&gt;&lt;b&gt;internet service providers&lt;/b&gt;&lt;/font&gt; offer integrated phone service." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dceaf5;strokeColor=none;fontFamily=Consolas;fontSize=17;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=8;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="25" y="488" width="440" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="17" value="Relevant passage" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="25" y="561" width="220" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="18" value="Rank &lt;b&gt;31 &amp;#8594; 1&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;fontColor=#4f8731;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="330" y="561" width="135" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="19" value="Use a &lt;font color=&quot;#5f9f3b&quot;&gt;&lt;b&gt;VOIP service provider&lt;/b&gt;&lt;/font&gt; as an &lt;u&gt;&lt;b&gt;alternative&lt;/b&gt;&lt;/u&gt; to your&lt;br&gt;&lt;u&gt;&lt;b&gt;home phone line&lt;/b&gt;&lt;/u&gt;." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff0c9;strokeColor=none;fontFamily=Consolas;fontSize=17;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=8;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="25" y="581" width="440" height="59" as="geometry"/>
+        </mxCell>
+        <mxCell id="20" value="Expansion-only match" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="25" y="648" width="220" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="21" value="Rank &lt;b&gt;5 &amp;#8594; filtered&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=17;fontColor=#b25350;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="315" y="648" width="150" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="22" value="&lt;font color=&quot;#c75d58&quot;&gt;&lt;b&gt;Internet Phone&lt;/b&gt;&lt;/font&gt;: &lt;font color=&quot;#c75d58&quot;&gt;&lt;b&gt;VoIP dialer&lt;/b&gt;&lt;/font&gt;, reseller packages,&lt;br&gt;login credentials, prices, and contact details ..." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5dddd;strokeColor=none;fontFamily=Consolas;fontSize=17;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=8;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="25" y="668" width="440" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="23" value="Green: generated &amp;nbsp; | &amp;nbsp; &lt;u&gt;&lt;b&gt;underline&lt;/b&gt;&lt;/u&gt;: original &amp;nbsp; | &amp;nbsp; Red: expansion-only" style="text;html=1;strokeColor=none;fillColor=none;fontFamily=Times New Roman;fontSize=15;align=center;verticalAlign=middle;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="30" y="731" width="430" height="22" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

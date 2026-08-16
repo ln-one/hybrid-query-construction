@@ -3,49 +3,29 @@
 
 \subsection{Fixed Cutoffs Alter Measured Effects}
 
-Table~\ref{tab:fixed-l} shows that fixed Top-$L$ fusion can change both
-retrieval scores and the ordering of query constructions. At $L=50$, Shared
-expansion exceeds the sparse binary mask in macro nDCG@10 (.4641 vs.\ .4639),
-whereas the ordering reverses under complete-list fusion (.4671 vs.\ .4675).
-This shows that method comparison depends on the selected cutoff.
+Figure~\ref{fig:fixed-l-diagnostics} compares the query-level judgment of DESA
+relative to Original at $L=50$ with the judgment under complete-list fusion.
+Each query--draw pair is labeled as a gain, tie, or loss from the corresponding
+metric difference. Diagonal cells preserve that judgment; off-diagonal cells
+show cases in which the fixed cutoff changes it.
 
-\begin{table*}[t]
+\begin{figure}[H]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{2.7pt}
-\begin{tabular}{lrrrrrrrr}
-\toprule
-Method & $L=10$ & $L=20$ & $L=50$ & $L=100$ & $L=200$ & $L=500$ & $L=1000$ & Complete \\
-\midrule
-No expansion        & .4478 & .4489 & .4512 & .4553 & .4565 & .4569 & .4571 & \textbf{.4572} \\
-Shared              & .4630 & .4633 & .4641 & .4645 & .4666 & .4670 & \textbf{.4671} & \textbf{.4671} \\
-Dense only          & .4566 & .4568 & .4582 & .4608 & .4617 & \textbf{.4622} & .4621 & .4621 \\
-Sparse only         & .4661 & .4676 & .4654 & .4686 & .4704 & .4713 & \textbf{.4715} & .4714 \\
-MuGI-style (controlled) & .4612 & .4615 & .4608 & .4613 & .4630 & .4636 & .4637 & \textbf{.4638} \\
-Sparse binary mask  & .4635 & .4637 & .4639 & .4649 & .4670 & .4672 & \textbf{.4675} & \textbf{.4675} \\
-Reference-only sparse & .4534 & .4537 & .4529 & .4537 & .4555 & .4559 & .4564 & \textbf{.4565} \\
-DESA                & .4738 & .4727 & .4709 & .4727 & .4740 & .4743 & \textbf{.4747} & \textbf{.4747} \\
-\bottomrule
-\end{tabular}
-\caption{Equal-dataset macro nDCG@10 under fixed top-$L$ and complete-list
-fusion on the seven evaluation datasets. Bold marks the maximum within each
-row.}
-\label{tab:fixed-l}
-\end{table*}
+\includegraphics[width=\columnwidth]{figures/fig_fixed_top_l_diagnostics.pdf}
+\caption{Transition between the DESA-versus-Original judgment at fixed
+$L=50$ (rows) and under complete-list fusion (columns). Cells report the
+equal-dataset percentage of query--draw pairs. Green off-diagonal cells change
+among gain, tie, and loss; red cells are strict gain--loss reversals.}
+\label{fig:fixed-l-diagnostics}
+\end{figure}
 
-The fused rankings at practical cutoffs also differ substantially from their
-complete-list targets. Across the eight constructions, exact agreement with
-the complete-list ordered Top-20 ranges from 0.04\% to 2.02\% at $L=20$ and
-from 12.35\% to 16.54\% at $L=50$. Even at $L=1000$, fixed-cutoff fusion does
-not always reproduce the complete-list result.
-
-The effect is clearer at the individual-query level. For DESA versus Original,
-$L=50$ assigns a different gain, tie, or loss label to 6.95\% of query and
-generation-draw pairs under nDCG and 18.84\% under Recall. Strict gain-to-loss
-or loss-to-gain reversals occur for 3.07\% and 3.06\%, respectively. At
-$L=100$, label changes remain at 2.17\% for nDCG and 11.74\% for Recall.
-Fixed-$L$ evaluation can therefore change the conclusion for individual
-queries even when macro scores remain stable.
+The fixed cutoff changes 6.95\% of nDCG judgments and 18.84\% of Recall
+judgments. Strict gain--loss reversals account for 3.07\% and 3.06\%,
+respectively. Thus, a practical fixed cutoff can change whether expansion is
+judged beneficial for an individual query, rather than merely perturbing the
+ranking. Results for other cutoffs, complete macro curves, and ordered Top-20
+agreement are reported in Appendix Tables~\ref{tab:fixed-l}
+and~\ref{tab:cutoff-query-diagnostics}.
 
 \subsection{Retrieval Effectiveness and Access Depth}
 
@@ -57,19 +37,26 @@ Recall@20 in the seven-dataset controlled comparison, reaching .4747 and
 become shallower in both channels is 63.31\%. All four improvements remain
 significant after Holm correction ($p_{\mathrm{Holm}}=.0004$).
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
-\small
-\setlength{\tabcolsep}{3.5pt}
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
 \begin{tabular}{lrrrr}
 \toprule
 Method & nDCG@10 & Recall@20 & $L_D$ & $L_S$ \\
 \midrule
-No expansion & .4572 & .4586 & 1752.4 & 1455.1 \\
-Shared       & .4671 & .4666 & \textbf{607.4} & \textbf{606.7} \\
-Dense only   & .4621 & .4637 & 1386.5 & 1219.9 \\
-Sparse only  & .4714 & .4678 & 884.4 & 822.0 \\
-DESA         & \textbf{.4747} & \textbf{.4695} & 728.9 & 673.2 \\
+\multicolumn{5}{l}{\textit{No expansion}} \\
+Original & 0.4572 & 0.4586 & 1752.4 & 1455.1 \\
+\addlinespace[1pt]
+\multicolumn{5}{l}{\textit{Symmetric expansion}} \\
+Shared & 0.4671 & 0.4666 & \textbf{607.4} & \textbf{606.7} \\
+\addlinespace[1pt]
+\multicolumn{5}{l}{\textit{Single-channel construction}} \\
+Dense only  & 0.4621 & 0.4637 & 1386.5 & 1219.9 \\
+Sparse only & \underline{0.4714} & \underline{0.4678} & 884.4 & 822.0 \\
+\addlinespace[1pt]
+\multicolumn{5}{l}{\textit{Channel-asymmetric construction}} \\
+DESA & \textbf{0.4747} & \textbf{0.4695} & \underline{728.9} & \underline{673.2} \\
 \bottomrule
 \end{tabular}
 \caption{Equal-dataset macro results for the seven-dataset controlled
@@ -109,22 +96,24 @@ small differences, whereas the complete channel-asymmetric construction
 significantly outperforms Shared expansion in nDCG. DESA's advantage therefore
 comes from combining the two channel-specific operations.
 
-\begin{figure*}[t]
+The observed rankings confirm the intended channel behavior
+(Figure~\ref{fig:mechanism-distributions}). Across 11,327 query and
+generation-draw pairs, the mean Dense angle is $11.98^\circ$, and the maximum
+is $27.87^\circ$, below the analytic $45^\circ$ bound. Sparse anchoring changes
+26.15\% of the original Sparse Top-20 on average.
+
+\begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/fig_mechanism_distributions.pdf}
+\includegraphics[width=\columnwidth]{figures/fig_mechanism_distributions.pdf}
 \caption{Realized behavior of the two channel operators over three generation
 draws on seven datasets. Dense angles are measured from the original query;
 Sparse turnover is one minus Top-20 overlap with the original sparse ranking.
 Boxes show the interquartile range and median; whiskers extend to 1.5 times the
 interquartile range, with outliers omitted.}
 \label{fig:mechanism-distributions}
-\end{figure*}
+\end{figure}
 
-The observed rankings confirm the intended channel behavior
-(Figure~\ref{fig:mechanism-distributions}). Across 11,327 query and
-generation-draw pairs, the mean Dense angle is $11.98^\circ$, and the maximum
-is $27.87^\circ$, below the analytic $45^\circ$ bound. Sparse anchoring changes
-26.15\% of the original Sparse Top-20 on average. Relevant-document
+Relevant-document
 reciprocal-rank gain correlates more strongly with Sparse-only nDCG gain than
 overall Top-20 turnover does (.391 vs.\ .078). Sparse anchoring therefore
 improves retrieval by promoting relevant documents within the original support,

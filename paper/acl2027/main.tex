@@ -1,40 +1,59 @@
 \documentclass[11pt]{article}
 
+\ifdefined\ARXIVVERSION
 \usepackage[preprint]{acl}
+\else
+\usepackage[review]{acl}
+\fi
 \usepackage{times}
 \usepackage{latexsym}
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{microtype}
 \usepackage{inconsolata}
 
-\title{Dense Expands, Sparse Anchors: Channel-Asymmetric LLM Query Expansion for Hybrid Retrieval}
+\title{Dense Expands, Sparse Anchors: Channel-Asymmetric Query Expansion for Hybrid Retrieval}
 
+\ifdefined\ARXIVVERSION
+\author{
+  Chunran Zhang \\
+  School of Computing and Artificial Intelligence \\
+  Southwest Jiaotong University \\
+  Chengdu, China \\
+  \texttt{chronis@my.swjtu.edu.cn}
+}
+\else
 \author{Anonymous ACL submission}
+\fi
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-LLM-based query expansion augments queries with generated document-like
-evidence. In hybrid retrieval, however, most evaluations fuse fixed top-$L$
-dense and sparse rankings. The cutoff determines both which cross-channel
-contributions enter fusion and how much of each ranking is accessed, so
-expansion gains measured at one cutoff may not persist at another. We address
-this problem by evaluating complete-list fusion quality together with the dense
-and sparse depths at which its ordered top-$K$ becomes fixed.
-
-We further introduce channel-asymmetric query expansion. A language model
-generates complementary reference passages that preserve the original query
-intent. Orthogonal residual expansion adds their new semantic directions to the
-dense query representation, while score-product anchoring uses their lexical
-evidence to rerank documents matched by the original sparse query. We evaluate
-the method on seven retrieval benchmarks through top-$L$ sensitivity analysis,
-complete-list fusion, access-depth replay, controlled comparisons, and
-robustness experiments.
+LLM-based query expansion improves retrieval by generating document-like
+evidence. In hybrid retrieval, however, most evaluations
+fuse fixed top-$L$ dense and sparse rankings. Because the cutoff controls both
+which cross-channel contributions enter fusion and how much of each ranking is
+accessed, gains measured at one $L$ can change or reverse at another. We
+separate these effects by evaluating retrieval effectiveness under
+complete-list fusion and recording the policy-specific per-channel replay
+stopping depths at which its ordered top-$K$ is certified. We then introduce DESA (Dense
+Expansion and Sparse Anchoring), a channel-asymmetric query expansion method.
+An LLM generates complementary reference passages;
+orthogonal residual expansion adds their new semantic directions to the dense
+query, while score-product anchoring incorporates their lexical evidence into
+sparse retrieval without broadening the original query's lexical support.
+Across seven benchmarks, DESA improves nDCG@10 and Recall@20
+over the unexpanded query by 3.82\% and 2.38\%, while reducing dense and sparse
+access depths by 36.90\% and 36.56\%. With equal dataset weighting, 63.31\%
+of queries become shallower in both channels. However, both depths increase
+with Contriever on Touch\'e-2020. These results support channel-specific
+integration of generated evidence and joint evaluation of retrieval
+effectiveness and access depth.
 \end{abstract}
 
 \input{sections/01-introduction}
@@ -42,6 +61,8 @@ robustness experiments.
 \input{sections/03-method}
 \input{sections/04-experiments}
 \input{sections/05-results}
+\input{sections/06-conclusion}
+\input{sections/07-limitations}
 
 \bibliography{references}
 

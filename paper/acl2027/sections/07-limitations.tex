@@ -1,0 +1,33 @@
+\section{Limitations}
+
+Our experiments cover seven English BEIR collections, two instruction-tuned
+generators, two dense encoders, and BM25 as the sparse retriever. The results
+therefore do not establish the same behavior for other languages, learned
+sparse retrievers, or other fusion rules. Score-product anchoring additionally
+assumes a non-negative sparse scoring function, and the access analysis fixes
+equally weighted WRRF, $K=20$, and a specific incremental replay policy.
+
+The reported access measurements are logical certification depths obtained by
+replaying stored rankings. They are not wall-clock latency and do not include
+reference generation, query encoding, indexing, or communication costs. An
+online system would need an incremental retrieval interface before a reduction
+in replay depth could be interpreted as an end-to-end speedup.
+
+The direct QuDAR comparison is limited to QuDAR-simple RRF. It follows the
+official four-signal, Top-1000 rank-fusion configuration and reuses the same
+generated evidence, but our frozen ranking artifacts do not contain the
+normalized retrieval scores required by QuDAR-confidence, and we do not add
+new LLM relevance judgments for QuDAR-llm. The comparison therefore supports
+parity with the reconstructable rank-based variant, not with every QuDAR
+weighting strategy.
+
+Generated references may contain irrelevant or unsupported expressions despite
+the intent-preserving prompt and structured validation. We average three draws
+and report parser fallback behavior, but this does not cover the full variation
+of possible generators and decoding settings. Finally, the benchmark relevance
+judgments are incomplete, as is common in pooled retrieval collections; methods
+that retrieve documents outside the original pools may therefore be
+underestimated. Our MuGI comparison reproduces its generation and integration
+components without pseudo-relevance-feedback calibration, and the complete
+prior-method comparison is limited to the four datasets on which all reproduced
+pipelines were available.

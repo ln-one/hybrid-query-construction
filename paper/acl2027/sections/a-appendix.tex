@@ -276,6 +276,33 @@ averaging the three generation draws within query.}
 
 \subsection{Cutoff, Operator-Control, and QuDAR Details}
 
+Table~\ref{tab:fixed-l} reports the complete macro nDCG@10 values behind the
+fixed-cutoff analysis.
+
+\begin{table*}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.7pt}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Method & $L=10$ & $L=20$ & $L=50$ & $L=100$ & $L=200$ & $L=500$ & $L=1000$ & Complete \\
+\midrule
+No expansion        & .4478 & .4489 & .4512 & .4553 & .4565 & .4569 & .4571 & \textbf{.4572} \\
+Shared              & .4630 & .4633 & .4641 & .4645 & .4666 & .4670 & \textbf{.4671} & \textbf{.4671} \\
+Dense only          & .4566 & .4568 & .4582 & .4608 & .4617 & \textbf{.4622} & .4621 & .4621 \\
+Sparse only         & .4661 & .4676 & .4654 & .4686 & .4704 & .4713 & \textbf{.4715} & .4714 \\
+MuGI-style (controlled) & .4612 & .4615 & .4608 & .4613 & .4630 & .4636 & .4637 & \textbf{.4638} \\
+Sparse binary mask  & .4635 & .4637 & .4639 & .4649 & .4670 & .4672 & \textbf{.4675} & \textbf{.4675} \\
+Reference-only sparse & .4534 & .4537 & .4529 & .4537 & .4555 & .4559 & .4564 & \textbf{.4565} \\
+DESA                & .4738 & .4727 & .4709 & .4727 & .4740 & .4743 & \textbf{.4747} & \textbf{.4747} \\
+\bottomrule
+\end{tabular}
+\caption{Equal-dataset macro nDCG@10 under fixed top-$L$ and complete-list
+fusion on the seven evaluation datasets. Bold marks the maximum within each
+row.}
+\label{tab:fixed-l}
+\end{table*}
+
 Table~\ref{tab:cutoff-query-diagnostics} reports the query--draw diagnostic
 behind the fixed-cutoff discussion. Conclusion change compares the sign of the
 method--Original difference under fixed-$L$ and complete-list fusion. Strict

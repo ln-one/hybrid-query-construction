@@ -12,14 +12,13 @@ own complete-list fused Top-20.
 - Independent repository; no EAHR, Qdrant, or Stratumind code dependency.
 - Chinese result report first; no manuscript drafting in this stage.
 - No online latency claim.
-- Development collections cannot support held-out claims.
+- Seven formal datasets are reported individually and with equal macro weight.
 - Every reported value must be recoverable from per-query records.
 
 ## Frozen decisions
 
 - Primary generator: Qwen2.5-7B-Instruct, three draws.
-- Robustness generator: Mistral-7B-Instruct-v0.3, 100 hash-selected queries per held-out set.
+- Robustness generator: Mistral-7B-Instruct-v0.3, 100 hash-selected queries per selected set.
 - Five references; no MuGI beta in the proposed Sparse construction.
 - BGE-small Dense, Pyserini BM25 Sparse, equal complete-list WRRF with k=60.
-- Held-out: FiQA, ArguAna, Touché-2020, SCIDOCS.
-
+- Formal datasets: SciFact, NFCorpus, TREC-COVID, FiQA, ArguAna, Touché-2020, SCIDOCS.

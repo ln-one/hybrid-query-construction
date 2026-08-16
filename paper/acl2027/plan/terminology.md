@@ -2,6 +2,7 @@
 
 | Chinese concept | Manuscript term |
 |---|---|
+| 本文方法 | Dense Expansion and Sparse Anchoring (DESA); define once, then DESA |
 | 大语言模型查询扩展 | LLM-based query expansion |
 | 通道非对称查询扩展 | channel-asymmetric query expansion |
 | 互补参考文本 | complementary reference passages |
@@ -22,3 +23,5 @@
 Use `query expansion` as the paper-wide category. Reserve `query rewriting`
 for descriptions of sources that use that term. `Dense expands; sparse anchors.`
 is a narrative summary rather than a separately defined algorithmic term.
+The paper title is `Dense Expands, Sparse Anchors: Channel-Asymmetric Query
+Expansion for Hybrid Retrieval`.

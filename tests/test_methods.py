@@ -1,6 +1,7 @@
 import numpy as np
 
 from hybrid_query_construction.fusion import rank_scores
+from hybrid_query_construction.mechanism import dense_geometry, sparse_reordering
 from hybrid_query_construction.methods import (
     contextual_mean,
     mugi_sparse_rewrite,
@@ -31,10 +32,30 @@ def test_orthogonal_residual_degenerates_to_original_without_new_direction() -> 
     np.testing.assert_allclose(orthogonal_residual(original, references), expected, atol=1e-6)
 
 
+def test_orthogonal_residual_stays_within_45_degrees_for_unit_inputs() -> None:
+    original = np.asarray([1.0, 0.0, 0.0], dtype=np.float32)
+    references = [np.asarray([0.0, 1.0, 0.0], dtype=np.float32)]
+    result = orthogonal_residual(original, references)
+    cosine = float(np.dot(result, original))
+    assert cosine >= (1.0 / np.sqrt(2.0)) - 1e-6
+
+
 def test_sparse_product_has_intersection_support() -> None:
     original = {"a": 2.0, "b": 3.0}
     rewrite = {"b": 4.0, "c": 5.0}
     assert sparse_score_product(original, rewrite) == {"b": 12.0}
+
+
+def test_sparse_product_preserves_original_support_for_expanded_query() -> None:
+    original = {"a": 2.0, "b": 3.0}
+    rewrite = {"a": 5.0, "b": 4.0, "c": 7.0}
+    assert sparse_score_product(original, rewrite).keys() == original.keys()
+
+
+def test_sparse_product_preserves_ranking_without_new_evidence() -> None:
+    original = {"a": 2.0, "b": 3.0, "c": 5.0}
+    rewrite = {key: value * 7.0 for key, value in original.items()}
+    assert rank_scores(sparse_score_product(original, rewrite)) == rank_scores(original)
 
 
 def test_sparse_product_ranking_is_scale_invariant() -> None:
@@ -44,6 +65,30 @@ def test_sparse_product_ranking_is_scale_invariant() -> None:
     assert rank_scores(sparse_score_product(original, rewrite)) == rank_scores(
         sparse_score_product(scaled, rewrite)
     )
+
+
+def test_dense_geometry_reports_known_angle() -> None:
+    geometry = dense_geometry(
+        np.asarray([1.0, 0.0], dtype=np.float32),
+        [np.asarray([0.0, 1.0], dtype=np.float32)],
+    )
+    assert geometry.residual_norm == 1.0
+    assert geometry.angle_degrees == 45.0
+
+
+def test_sparse_reordering_reports_support_and_relevant_rank_gain() -> None:
+    diagnostics = sparse_reordering(
+        ["a", "b", "c", "d"],
+        ["b", "a", "d", "c"],
+        {"b": 1, "c": 1, "missing": 1},
+    )
+    assert diagnostics.support_equal
+    assert diagnostics.support_retention == 1.0
+    assert diagnostics.missing_documents == 0
+    assert diagnostics.top20_overlap == 1.0
+    assert diagnostics.ranked_relevant_documents == 2
+    assert diagnostics.relevant_mean_rank_gain == 0.0
+    assert diagnostics.relevant_reciprocal_rank_delta > 0.0
 
 
 def test_mugi_repetition_matches_public_integer_rule() -> None:

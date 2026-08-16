@@ -17,8 +17,16 @@ from .statistics import (
 
 PRIMARY_METRICS = ("ndcg_at_10", "recall_at_20", "dense_depth", "sparse_depth")
 COMPARATORS = ("original", "bridge_shared")
-DEVELOPMENT_DATASETS = ("scifact", "nfcorpus", "trec-covid")
-HELDOUT_DATASETS = ("fiqa", "arguana", "webis-touche2020", "scidocs")
+EVALUATION_DATASETS = (
+    "scifact",
+    "nfcorpus",
+    "trec-covid",
+    "fiqa",
+    "arguana",
+    "webis-touche2020",
+    "scidocs",
+)
+FIDELITY_DATASETS = ("fiqa", "arguana", "webis-touche2020", "scidocs")
 
 
 def load_result_rows(input_directory: Path) -> list[dict[str, Any]]:
@@ -337,7 +345,7 @@ def _plot_quality_access(summary: pd.DataFrame, output: Path) -> None:
 
 def _plot_fixed_top_l(summary: pd.DataFrame, output: Path) -> None:
     selected = summary[
-        summary["dataset"].isin(HELDOUT_DATASETS)
+        summary["dataset"].isin(EVALUATION_DATASETS)
         & (summary["condition_id"] == "primary")
         & summary["method"].isin(("original", "bridge_shared", "proposed"))
         & (summary["reference_count"] == 5)
@@ -444,28 +452,27 @@ def build_report(
         frame["condition_id"] = "primary"
     query_means = _query_means(frame)
     summary = _summary(query_means)
-    heldout_query_means = query_means[query_means["dataset"].isin(HELDOUT_DATASETS)]
-    access, access_intervals = _access_changes(heldout_query_means)
-    tests = _paired_tests(heldout_query_means)
-    method_intervals = _method_macro_intervals(heldout_query_means)
+    evaluation_query_means = query_means[
+        query_means["dataset"].isin(EVALUATION_DATASETS)
+    ]
+    access, access_intervals = _access_changes(evaluation_query_means)
+    tests = _paired_tests(evaluation_query_means)
+    method_intervals = _method_macro_intervals(evaluation_query_means)
     classifications = _classify_confirmatory_outcomes(tests)
 
     query_means.to_csv(output_directory / "per-query-draw-mean.csv", index=False)
     summary.to_csv(output_directory / "all-results.csv", index=False)
-    heldout_main = summary[
-        summary["dataset"].isin(HELDOUT_DATASETS)
+    evaluation_main = summary[
+        summary["dataset"].isin(EVALUATION_DATASETS)
         & (summary["track"] == "controlled")
         & (summary["condition_id"] == "primary")
         & (summary["reference_count"] == 5)
         & (summary["rrf_constant"] == 60)
     ]
-    heldout_main.to_csv(output_directory / "main-results.csv", index=False)
+    evaluation_main.to_csv(output_directory / "main-results.csv", index=False)
     summary[
-        summary["dataset"].isin(HELDOUT_DATASETS) & (summary["track"] == "fidelity")
+        summary["dataset"].isin(FIDELITY_DATASETS) & (summary["track"] == "fidelity")
     ].to_csv(output_directory / "fidelity-results.csv", index=False)
-    summary[summary["dataset"].isin(DEVELOPMENT_DATASETS)].to_csv(
-        output_directory / "development-results.csv", index=False
-    )
     summary[summary["track"] == "ablation"].to_csv(
         output_directory / "ablation-results.csv", index=False
     )
@@ -486,7 +493,7 @@ def build_report(
     tests.to_csv(output_directory / "primary-paired-tests.csv", index=False)
     method_intervals.to_csv(output_directory / "main-macro-bootstrap.csv", index=False)
     classifications.to_csv(output_directory / "outcome-classification.csv", index=False)
-    _plot_quality_access(heldout_main, output_directory / "quality-access.png")
+    _plot_quality_access(evaluation_main, output_directory / "quality-access.png")
 
     fixed_summary = pd.DataFrame()
     fixed_rows = load_fixed_top_l_rows(input_directory)
@@ -545,13 +552,13 @@ def build_report(
             )
             generation_summary.to_csv(output_directory / "generation-costs.csv", index=False)
 
-    controlled = heldout_main
+    controlled = evaluation_main
     macro = (
         controlled.groupby("method", as_index=False)[list(PRIMARY_METRICS)]
         .mean()
         .sort_values("method")
     )
-    main_dataset_table = heldout_main[
+    main_dataset_table = evaluation_main[
         [
             "dataset",
             "method",
@@ -569,7 +576,7 @@ def build_report(
     ]
 
     fidelity = summary[
-        summary["dataset"].isin(HELDOUT_DATASETS) & (summary["track"] == "fidelity")
+        summary["dataset"].isin(FIDELITY_DATASETS) & (summary["track"] == "fidelity")
     ]
     fidelity_macro = (
         fidelity.groupby("method", as_index=False)[list(PRIMARY_METRICS)]
@@ -584,7 +591,7 @@ def build_report(
     )
 
     reference_sensitivity = summary[
-        summary["dataset"].isin(HELDOUT_DATASETS)
+        summary["dataset"].isin(EVALUATION_DATASETS)
         & summary["track"].isin(("controlled", "ablation"))
         & (summary["condition_id"] == "primary")
         & (summary["method"] == "proposed")
@@ -600,7 +607,7 @@ def build_report(
     )
 
     rrf_sensitivity = summary[
-        summary["dataset"].isin(HELDOUT_DATASETS)
+        summary["dataset"].isin(EVALUATION_DATASETS)
         & summary["track"].isin(("controlled", "ablation"))
         & (summary["condition_id"] == "primary")
         & (summary["method"] == "proposed")
@@ -623,7 +630,7 @@ def build_report(
     if not fixed_summary.empty:
         fixed_macro = (
             fixed_summary[
-                fixed_summary["dataset"].isin(HELDOUT_DATASETS)
+                fixed_summary["dataset"].isin(EVALUATION_DATASETS)
                 & (fixed_summary["condition_id"] == "primary")
                 & (fixed_summary["reference_count"] == 5)
                 & (fixed_summary["rrf_constant"] == 60)
@@ -639,7 +646,7 @@ def build_report(
         )
 
     robustness = summary[
-        summary["dataset"].isin(HELDOUT_DATASETS)
+        summary["dataset"].isin(EVALUATION_DATASETS)
         & (summary["track"] == "robustness")
         & summary["method"].isin(("original", "proposed"))
     ]
@@ -677,20 +684,14 @@ def build_report(
         )
         scale_pairs = scale_pairs.sort_values("documents")
 
-    development = summary[
-        summary["dataset"].isin(DEVELOPMENT_DATASETS)
-        & (summary["track"] == "controlled")
-        & (summary["condition_id"] == "primary")
-        & (summary["reference_count"] == 5)
-        & (summary["rrf_constant"] == 60)
-        & summary["method"].isin(("original", "proposed"))
-    ]
-    development_pairs = _original_proposed_pairs(development, group_columns=("dataset",))
     unique_queries = query_means[["dataset", "query_id"]].drop_duplicates().shape[0]
     lines = [
         "# 正式实验结果报告",
         "",
-        "> 本报告只读取真实逐查询记录；开发、held-out、鲁棒性与规模结果必须按 track 分开解释。",
+        (
+            "> 本报告只读取真实逐查询记录；七个正式数据集等权汇总，"
+            "鲁棒性与规模实验按 track 单独报告。"
+        ),
         "",
         "## 数据完整性",
         "",
@@ -708,7 +709,7 @@ def build_report(
         "",
         method_intervals.to_markdown(index=False, floatfmt=".4f"),
         "",
-        "## Held-out 各数据集主结果",
+        "## 七个正式数据集主结果",
         "",
         _markdown_or_empty(main_dataset_table),
         "",
@@ -724,7 +725,7 @@ def build_report(
         "",
         access_intervals.to_markdown(index=False, floatfmt=".4f"),
         "",
-        "## 预注册主比较",
+        "## 主比较",
         "",
         tests.to_markdown(index=False, floatfmt=".6f"),
         "",
@@ -769,10 +770,6 @@ def build_report(
         "## 规模趋势",
         "",
         _markdown_or_empty(scale_pairs),
-        "",
-        "## 开发集机制检查（不用于 held-out 主结论）",
-        "",
-        _markdown_or_empty(development_pairs),
         "",
         "## 生成成本",
         "",

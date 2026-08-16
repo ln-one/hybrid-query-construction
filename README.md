@@ -1,12 +1,13 @@
 # Hybrid Query Construction
 
-This private research repository evaluates asymmetric query construction for
-hybrid dense--sparse retrieval. It is intentionally independent of EAHR,
+This private research repository evaluates DESA (Dense Expansion and Sparse
+Anchoring), a channel-asymmetric query construction for hybrid dense--sparse
+retrieval. It is intentionally independent of EAHR,
 Stratumind, Qdrant, and any private production implementation.
 
-The repository is experiment-first. Formal claims are made only from frozen
-held-out artifacts. Development results from SciFact, NFCorpus, and TREC-COVID
-cannot be used as held-out evidence.
+The repository is experiment-first. The formal evaluation covers SciFact,
+NFCorpus, TREC-COVID, FiQA, ArguAna, Touché-2020, and SCIDOCS, with every
+dataset receiving equal weight in macro results.
 
 ## Reproduction levels
 
