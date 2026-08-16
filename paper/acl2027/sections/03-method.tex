@@ -23,16 +23,6 @@ The passages therefore vary in expression rather than intent, allowing the
 two retrieval channels to draw additional evidence from a shared expansion.
 The complete prompt and decoding settings are provided in Appendix~A.
 
-\newpage
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/fig_desa_overview.pdf}
-  \caption{Design principle of DESA. The same generated evidence expands
-  Dense semantics but remains anchored to the original query's lexical support
-  in Sparse retrieval.}
-  \label{fig:desa-overview}
-\end{figure}
-
 \subsection{Channel-Asymmetric Query Construction}
 
 \subsubsection{Orthogonal Residual Expansion}
@@ -48,6 +38,16 @@ query--reference pair as unit vectors:
 \bar{\mathbf v}_r&=\frac{1}{n}\sum_{i=1}^{n}\mathbf v_i .
 \end{aligned}
 \]
+
+\newpage
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/fig_desa_overview.pdf}
+  \caption{Design principle of DESA. The same generated evidence expands
+  Dense semantics but remains anchored to the original query's lexical support
+  in Sparse retrieval.}
+  \label{fig:desa-overview}
+\end{figure}
 
 The component of $\bar{\mathbf v}_r$ parallel to the original query is
 removed, and the remaining residual is added to $\mathbf v_o$:
